@@ -6,7 +6,7 @@ import java.util.Date;
 
 import fr.petitl.relational.repository.EnableRelationalRepositories;
 import fr.petitl.relational.repository.SpringTest;
-import fr.petitl.relational.repository.repository.RelationalTemplate;
+import fr.petitl.relational.repository.template.RelationalTemplateBak;
 import fr.petitl.relational.repository.simple.repository.PojoRepository;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,8 +38,8 @@ public class SimpleRepositoryTest extends SpringTest {
         }
 
         @Bean
-        public RelationalTemplate relationalTemplate(DataSource dataSource) {
-            return new RelationalTemplate(dataSource);
+        public RelationalTemplateBak relationalTemplate(DataSource dataSource) {
+            return new RelationalTemplateBak(dataSource);
         }
     }
 

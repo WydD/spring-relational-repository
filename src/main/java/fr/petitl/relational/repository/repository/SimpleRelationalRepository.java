@@ -14,6 +14,7 @@ import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import com.nurkiewicz.jdbcrepository.RowUnmapper;
 import com.nurkiewicz.jdbcrepository.TableDescription;
 import com.nurkiewicz.jdbcrepository.sql.SqlGenerator;
+import fr.petitl.relational.repository.template.RelationalTemplateBak;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -37,9 +38,9 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     private final boolean generatedPK;
 
     private SqlGenerator sqlGenerator = new SqlGenerator();
-    private RelationalTemplate jdbcOperations;
+    private RelationalTemplateBak jdbcOperations;
 
-    public SimpleRelationalRepository(RelationalEntityInformation<T, ID> entityInformation, RelationalTemplate jdbcOperations) {
+    public SimpleRelationalRepository(RelationalEntityInformation<T, ID> entityInformation, RelationalTemplateBak jdbcOperations) {
         this.jdbcOperations = jdbcOperations;
         BeanMapper<T> beanMapper = new BeanMapper<>(entityInformation.getJavaType());
         rowMapper = beanMapper;
@@ -270,7 +271,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
             try {
                 return rowMapper.mapRow(it, 0);
             } catch (SQLException e) {
-                throw new StreamSqlException(e);
+                throw new RuntimeException(e);
             }
         });
     }
@@ -290,7 +291,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
                     return (ID) result;
                 }
             } catch (SQLException e) {
-                throw new StreamSqlException(e);
+                throw new RuntimeException(e);
             }
         });
     }

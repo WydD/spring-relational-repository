@@ -1,8 +1,10 @@
-package fr.petitl.relational.repository.repository;
+package fr.petitl.relational.repository.template;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
+
+import fr.petitl.relational.repository.repository.StreamSqlException;
 
 public class ResultSetIterator implements Iterator<ResultSet> {
 

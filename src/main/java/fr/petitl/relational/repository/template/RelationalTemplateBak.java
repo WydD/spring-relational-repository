@@ -1,4 +1,4 @@
-package fr.petitl.relational.repository.repository;
+package fr.petitl.relational.repository.template;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -16,16 +16,16 @@ import org.springframework.jdbc.support.JdbcUtils;
 /**
  *
  */
-public class RelationalTemplate extends JdbcTemplate {
+public class RelationalTemplateBak extends JdbcTemplate {
 
-    public RelationalTemplate() {
+    public RelationalTemplateBak() {
     }
 
-    public RelationalTemplate(DataSource dataSource) {
+    public RelationalTemplateBak(DataSource dataSource) {
         super(dataSource);
     }
 
-    public RelationalTemplate(DataSource dataSource, boolean lazyInit) {
+    public RelationalTemplateBak(DataSource dataSource, boolean lazyInit) {
         super(dataSource, lazyInit);
     }
 

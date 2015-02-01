@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 import fr.petitl.relational.repository.query.JdbcQueryMethod;
 import fr.petitl.relational.repository.query.Query;
-import fr.petitl.relational.repository.repository.RelationalTemplate;
+import fr.petitl.relational.repository.template.RelationalTemplateBak;
 import fr.petitl.relational.repository.repository.SimpleRelationalRepository;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
@@ -18,9 +18,9 @@ import org.springframework.data.repository.query.parser.PartTree;
  */
 public class RelationalRepositoryFactorySupport extends RepositoryFactorySupport {
 
-    private RelationalTemplate operations;
+    private RelationalTemplateBak operations;
 
-    public RelationalRepositoryFactorySupport(RelationalTemplate operations) {
+    public RelationalRepositoryFactorySupport(RelationalTemplateBak operations) {
         this.operations = operations;
     }
 
