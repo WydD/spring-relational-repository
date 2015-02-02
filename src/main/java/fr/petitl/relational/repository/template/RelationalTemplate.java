@@ -128,7 +128,7 @@ public class RelationalTemplate extends JdbcAccessor {
 
     public <E, F> Stream<F> executeQuery(String sql, E input, PrepareStatement<E> pse, RowMapper<F> rowMapper) {
         return executeDontClose(statement -> {
-            if (input != null && pse != null)
+            if (pse != null)
                 pse.prepare(statement, input);
             ResultSet rs = statement.executeQuery();
             Connection connection = statement.getConnection();

@@ -47,7 +47,7 @@ public class RelationalTemplateBak extends JdbcTemplate {
             final ResultSet rs =  stmt.executeQuery(sql);
             final Statement finalStmt = stmt;
             final Connection finalCon = con;
-            return StreamSupport.stream(Spliterators.spliteratorUnknownSize(new ResultSetIterator(rs), 0), false).onClose(() -> {
+            return StreamSupport.stream(Spliterators.spliteratorUnknownSize(new ResultSetIteratorBak(rs), 0), false).onClose(() -> {
                 JdbcUtils.closeResultSet(rs);
                 JdbcUtils.closeStatement(finalStmt);
                 DataSourceUtils.releaseConnection(finalCon, getDataSource());

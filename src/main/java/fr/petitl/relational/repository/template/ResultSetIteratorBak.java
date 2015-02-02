@@ -4,13 +4,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
 
-import fr.petitl.relational.repository.repository.StreamSqlException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jca.cci.InvalidResultSetAccessException;
 
-public class ResultSetIterator implements Iterator<ResultSet> {
+public class ResultSetIteratorBak implements Iterator<ResultSet> {
 
     private ResultSet rs;
 
-    public ResultSetIterator(ResultSet rs) {
+    public ResultSetIteratorBak(ResultSet rs) {
         this.rs = rs;
     }
 
@@ -20,7 +21,7 @@ public class ResultSetIterator implements Iterator<ResultSet> {
         try {
             return rs.next();
         } catch (SQLException e) {
-            throw new StreamSqlException(e);
+            throw new InvalidResultSetAccessException("While doing rs.next()", e);
         }
 
     }
