@@ -4,12 +4,12 @@ import javax.sql.DataSource;
 import java.sql.*;
 import java.util.Iterator;
 import java.util.Spliterators;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ConnectionCallback;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcAccessor;
 import org.springframework.jdbc.support.JdbcUtils;
@@ -104,29 +104,63 @@ public class RelationalTemplate extends JdbcAccessor {
     }
 
 
-    public int executeUpdate(String sql) {
-        return execute(statement -> statement.executeUpdate(sql), Connection::createStatement);
-    }
-
-    public <E> int[] batchUpdate(String sql, Stream<E> input, PrepareStatement<E> pse) {
+    public <E> int[] executeBatch(String sql, Stream<E> input, StatementMapper<E> pse) {
         return execute(statement -> {
             Iterable<E> iterator = input::iterator;
             for (E e : iterator) {
-                pse.prepare(statement, e);
+                if (pse != null)
+                    pse.prepare(statement, e);
                 statement.addBatch();
             }
             return statement.executeBatch();
         }, con -> con.prepareStatement(sql));
     }
 
-    public <E> int executeUpdate(String sql, E input, PrepareStatement<E> pse) {
+    public <E> int executeUpdate(String sql, E input, StatementMapper<E> pse) {
         return execute(statement -> {
-            pse.prepare(statement, input);
+            if (pse != null)
+                pse.prepare(statement, input);
             return statement.executeUpdate();
         }, con -> con.prepareStatement(sql));
     }
 
-    public <E, F> Stream<F> executeQuery(String sql, E input, PrepareStatement<E> pse, RowMapper<F> rowMapper) {
+    public <E> Stream<E> mapInsert(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
+        return executeDontClose(statement -> {
+            Connection connection = statement.getConnection();
+            return input.map(it -> translateExceptions("StreamInsertMapping", sql, () -> {
+                if (pse != null)
+                    pse.prepare(statement, it);
+                statement.executeUpdate();
+                ResultSet rs = statement.getGeneratedKeys();
+                try {
+                    keySetter.apply(it).mapRow(rs);
+                } finally {
+                    release(rs);
+                }
+                return it;
+            })).onClose(() -> {
+                release(statement);
+                release(connection);
+            });
+        }, con -> con.prepareStatement(sql));
+    }
+
+    public <E> E executeInsertGenerated(String sql, E input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
+        return execute(statement -> {
+            if (pse != null)
+                pse.prepare(statement, input);
+            statement.executeUpdate();
+            ResultSet rs = statement.getGeneratedKeys();
+            try {
+                keySetter.apply(input).mapRow(rs);
+            } finally {
+                release(rs);
+            }
+            return input;
+        }, con -> con.prepareStatement(sql));
+    }
+
+    public <E, F> Stream<F> executeQuery(String sql, E input, StatementMapper<E> pse, RowMapper<F> rowMapper) {
         return executeDontClose(statement -> {
             if (pse != null)
                 pse.prepare(statement, input);
@@ -139,11 +173,11 @@ public class RelationalTemplate extends JdbcAccessor {
                         release(statement);
                         release(connection);
                     })
-                    .map(it -> translateExceptions("StreamMapping", sql, () -> rowMapper.mapRow(it, it.getRow())));
+                    .map(it -> translateExceptions("StreamMapping", sql, () -> rowMapper.mapRow(it)));
         }, con -> con.prepareStatement(sql));
     }
 
-    public <E, F> F executeOne(String sql, E input, PrepareStatement<E> pse, RowMapper<F> rowMapper) {
+    public <E, F> F executeOne(String sql, E input, StatementMapper<E> pse, RowMapper<F> rowMapper) {
         return executeQuery(sql, input, pse, rowMapper).findFirst().orElse(null);
     }
 

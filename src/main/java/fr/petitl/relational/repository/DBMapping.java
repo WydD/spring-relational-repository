@@ -1,6 +1,7 @@
 package fr.petitl.relational.repository;
 
 import java.lang.reflect.Field;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -12,8 +13,8 @@ public interface DBMapping {
         return rs.getObject(column);
     }
 
-    public default Object toDB(Object o, Field sourceField) {
-        return o;
+    public default void toDB(PreparedStatement ps, int column, Object o, Field sourceField) throws SQLException {
+        ps.setObject(column, o);
     }
 
     public static class Default implements DBMapping {

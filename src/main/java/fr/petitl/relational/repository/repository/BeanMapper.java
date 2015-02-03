@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.jdbc.core.RowMapper;
+import fr.petitl.relational.repository.template.RowMapper;
 
 /**
  *
@@ -34,23 +34,35 @@ public class BeanMapper<T> implements RowMapper<T> {
         return fieldData;
     }
 
+    public <S extends T> RowMapper<S> instanceMapper(S instance) {
+        return rs -> mapToInstance(rs, instance);
+    }
+
     @Override
-    public T mapRow(ResultSet rs, int j) throws SQLException {
+    public T mapRow(ResultSet rs) throws SQLException {
         try {
             T instance = clazz.newInstance();
+            return mapToInstance(rs, instance);
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private <S extends T> S mapToInstance(ResultSet rs, S instance) throws SQLException {
+        try {
             ResultSetMetaData meta = rs.getMetaData();
             for (int i = 1; i <= meta.getColumnCount(); i++) {
                 String name = meta.getColumnName(i);
 
                 FieldMappingData fieldData = getFromColumnName(name);
 
-                Object object = fieldData.dbMapping.fromDB(rs, i, fieldData.field);
+                Object object = fieldData.attributeReader.readAttribute(rs, i, fieldData.field);
                 fieldData.writeMethod.invoke(instance, object);
             }
-
-            return instance;
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new IllegalStateException(e);
         }
+
+        return instance;
     }
 }

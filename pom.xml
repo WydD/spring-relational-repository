@@ -70,9 +70,9 @@
             <version>${spring.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.nurkiewicz.jdbcrepository</groupId>
-            <artifactId>jdbcrepository</artifactId>
-            <version>0.4.1</version>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
+            <version>1.9.0.RELEASE</version>
         </dependency>
     </dependencies>
 </project>

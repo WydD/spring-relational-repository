@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import fr.petitl.relational.repository.DBMapping;
 import fr.petitl.relational.repository.annotation.Column;
@@ -23,14 +24,17 @@ public class FieldUtil {
         }
 
         String colName = null;
-        DBMapping dbMapping;
+        BeanAttributeReader reader;
+        BeanAttributeWriter writer;
         Column annotation = field.getDeclaredAnnotation(Column.class);
         if (annotation == null) {
-            dbMapping = DBMapping.Default.INSTANCE;
+            reader = BeanAttributeReader.Default.INSTANCE;
+            writer = BeanAttributeWriter.Default.INSTANCE;
         } else {
             colName = annotation.name();
             try {
-                dbMapping = annotation.mapping().newInstance();
+                reader = annotation.reader().newInstance();
+                writer = annotation.writer().newInstance();
             } catch (InstantiationException | IllegalAccessException e) {
                 throw new IllegalStateException(e);
             }
@@ -47,17 +51,9 @@ public class FieldUtil {
         Method readMethod = f.getReadMethod();
         if (readMethod == null)
             throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find read method");
-        data = new FieldMappingData(colName, field, writeMethod, readMethod, dbMapping);
+        data = new FieldMappingData(colName, field, writeMethod, readMethod, writer, reader);
         cache.put(field, data);
         return data;
-    }
-
-    public static String[] getColumnNames(List<FieldMappingData> columns) {
-        String[] result = new String[columns.size()];
-        for (int i = 0; i < result.length; i++) {
-            result[i] = columns.get(i).columnName;
-        }
-        return result;
     }
 
     public static String camelToSnakeCase(String camelCase) {

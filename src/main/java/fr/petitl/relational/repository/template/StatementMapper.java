@@ -6,6 +6,6 @@ import java.sql.SQLException;
 /**
  *
  */
-public interface PrepareStatement<E> {
+public interface StatementMapper<E> {
     public void prepare(PreparedStatement pse, E e) throws SQLException;
 }
