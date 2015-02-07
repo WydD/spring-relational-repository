@@ -2,9 +2,8 @@ package fr.petitl.relational.repository.annotation;
 
 import java.lang.annotation.*;
 
-import fr.petitl.relational.repository.DBMapping;
-import fr.petitl.relational.repository.repository.BeanAttributeReader;
-import fr.petitl.relational.repository.repository.BeanAttributeWriter;
+import fr.petitl.relational.repository.template.bean.BeanAttributeReader;
+import fr.petitl.relational.repository.template.bean.BeanAttributeWriter;
 
 /**
  *

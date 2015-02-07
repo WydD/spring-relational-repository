@@ -1,12 +1,9 @@
-package fr.petitl.relational.repository.repository;
+package fr.petitl.relational.repository.template.bean;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
 
 import fr.petitl.relational.repository.template.RowMapper;
 
@@ -15,23 +12,10 @@ import fr.petitl.relational.repository.template.RowMapper;
  */
 public class BeanMapper<T> implements RowMapper<T> {
 
-    private Class<T> clazz;
+    private BeanMappingData<T> mappingData;
 
-    private Map<String, FieldMappingData> fieldMap = new HashMap<>();
-
-    public BeanMapper(Class<T> clazz) {
-        this.clazz = clazz;
-        for (Field field : clazz.getDeclaredFields()) {
-            FieldMappingData data = FieldUtil.getData(field);
-            fieldMap.put(data.columnName, data);
-        }
-    }
-
-    public FieldMappingData getFromColumnName(String name) {
-        FieldMappingData fieldData = fieldMap.get(name.toLowerCase());
-        if (fieldData == null)
-            throw new IllegalStateException("Can not write column name " + name + ": can't find matching property");
-        return fieldData;
+    public BeanMapper(BeanMappingData<T> mappingData) {
+        this.mappingData = mappingData;
     }
 
     public <S extends T> RowMapper<S> instanceMapper(S instance) {
@@ -41,7 +25,7 @@ public class BeanMapper<T> implements RowMapper<T> {
     @Override
     public T mapRow(ResultSet rs) throws SQLException {
         try {
-            T instance = clazz.newInstance();
+            T instance = mappingData.getBeanClass().newInstance();
             return mapToInstance(rs, instance);
         } catch (InstantiationException | IllegalAccessException e) {
             throw new IllegalStateException(e);
@@ -54,7 +38,7 @@ public class BeanMapper<T> implements RowMapper<T> {
             for (int i = 1; i <= meta.getColumnCount(); i++) {
                 String name = meta.getColumnName(i);
 
-                FieldMappingData fieldData = getFromColumnName(name);
+                FieldMappingData fieldData = mappingData.fieldForColumn(name);
 
                 Object object = fieldData.attributeReader.readAttribute(rs, i, fieldData.field);
                 fieldData.writeMethod.invoke(instance, object);

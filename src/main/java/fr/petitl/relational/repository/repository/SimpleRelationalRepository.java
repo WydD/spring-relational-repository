@@ -1,88 +1,78 @@
 package fr.petitl.relational.repository.repository;
 
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import fr.petitl.relational.repository.annotation.Table;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.RelationalQuery;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
+import fr.petitl.relational.repository.template.bean.BeanMappingData;
+import fr.petitl.relational.repository.template.bean.FieldMappingData;
+import fr.petitl.relational.repository.repository.sql.BeanSQLGeneration;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.jdbc.support.JdbcUtils;
-
-import static java.lang.String.format;
 
 public class SimpleRelationalRepository<T, ID extends Serializable> implements RelationalRepository<T, ID> {
+    private static final RowMapper<Long> COUNT_MAPPER = it -> it.getLong(1);
 
     private final Function<T, ID> idGetter;
-    private final BiConsumer<T, Map<String, Object>> idSetter;
-    private final String tableName;
-    private final String whereIds;
-    private final String columnIds;
     private final RelationalEntityInformation<T, ID> entityInformation;
+    private final BeanSQLGeneration<T, ID> sql;
+    private final BeanMappingData<T> mappingData;
 
-    public static Object[] pk(Object... idValues) {
-        return idValues;
-    }
-
-    private final BeanMapper<T> rowMapper;
-    private final BeanUnmapper<T> rowUnmapper;
     private final boolean generatedPK;
 
     private RelationalTemplate template;
 
     public SimpleRelationalRepository(RelationalEntityInformation<T, ID> entityInformation, RelationalTemplate template) {
         this.template = template;
-        rowMapper = new BeanMapper<>(entityInformation.getJavaType());
-        rowUnmapper = new BeanUnmapper<T>(entityInformation.getJavaType());
-        Table tableAnnotation = entityInformation.getJavaType().getDeclaredAnnotation(Table.class);
-        if (tableAnnotation == null) {
-            throw new IllegalArgumentException("Given class is not a @Table");
-        }
+        sql = new BeanSQLGeneration<>(entityInformation);
+
+        mappingData = entityInformation.getMappingData();
+
         idGetter = entityInformation::getId;
         generatedPK = entityInformation.isGeneratedPK();
-        if (generatedPK) {
-            idSetter = (instance, keys) -> {
-                try {
-                    for (Map.Entry<String, Object> entry : keys.entrySet()) {
-                        rowMapper.getFromColumnName(entry.getKey()).writeMethod.invoke(instance, entry.getValue());
-                    }
-                } catch (InvocationTargetException | IllegalAccessException e) {
-                    throw new IllegalStateException(e);
-                }
-            };
-        } else {
-            idSetter = null;
-        }
 
-        tableName = tableAnnotation.value();
         this.entityInformation = entityInformation;
-        whereIds = entityInformation.getPkFields().stream().map(it -> it.columnName + " = ?").collect(Collectors.joining(" AND "));
-        columnIds = entityInformation.getPkFields().stream().map(it -> it.columnName).collect(Collectors.joining(", "));
     }
 
     public <E> RelationalQuery<E> query(String sql, RowMapper<E> mapper) {
         return new RelationalQuery<>(sql, template, mapper);
     }
 
+    private <E> RelationalQuery<E> queryById(String sql, ID id, RowMapper<E> mapper) {
+        RelationalQuery<E> query = query(sql, mapper);
+        setId(id, query, 1);
+        return query;
+    }
+
+    private <E> void setId(ID id, RelationalQuery<E> query, int base) {
+        if (id instanceof Object[]) {
+            Object[] objects = (Object[]) id;
+            for (int i = 0; i < objects.length; i++) {
+                query.setParameter(i + base, objects[i]);
+            }
+        } else {
+            query.setParameter(base, id);
+        }
+    }
+
     @Override
     public long count() {
-        return query(format("SELECT count(*) FROM %s", tableName), it -> it.getLong(1)).findOne();
+        return query(sql.countStar(), it -> it.getLong(1)).findOne();
     }
 
     @Override
     public void delete(ID id) {
-        setId(id, query(format("DELETE FROM %s WHERE %s", tableName, whereIds), null)).update();
+        queryById(sql.deleteById(), id, null).update();
     }
 
     @Override
@@ -99,25 +89,14 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     @Override
     public void deleteAll() {
-        query(format("DELETE FROM %s", tableName), null).update();
+        query(sql.delete(), null).update();
     }
 
     @Override
     public boolean exists(ID id) {
-        return setId(id, query(format("SELECT count(*) FROM %s WHERE %s", tableName, whereIds), it -> it.getLong(1))).findOne() > 0;
+        return queryById(sql.exists(), id, COUNT_MAPPER).findOne() > 0;
     }
 
-    private <E> RelationalQuery<E> setId(ID id, RelationalQuery<E> query) {
-        if (id instanceof Object[]) {
-            Object[] objects = (Object[]) id;
-            for (int i = 0; i < objects.length; i++) {
-                query.setParameter(i + 1, objects[i]);
-            }
-        } else {
-            query.setParameter(1, id);
-        }
-        return query;
-    }
 
     @Override
     public List<T> findAll() {
@@ -126,7 +105,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     @Override
     public T findOne(ID id) {
-        return setId(id, query(format("SELECT * FROM %s WHERE %s", tableName, whereIds), rowMapper)).findOne();
+        return queryById(sql.selectById(), id, mappingData.getMapper()).findOne();
     }
 
     @Override
@@ -134,27 +113,22 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         return create(entity);
     }
 
+    @Override
     public <S extends T> S update(S entity) {
-       /* final Map<String, Object> columns = preUpdate(entity, columnsCopy(entity));
-        final List<Object> idValues = removeIdColumns(columns);
-        final String updateQuery = sqlGenerator.update(table, columns);
-        for (int i = 0; i < table.getIdColumns().size(); ++i) {
-            columns.put(table.getIdColumns().get(i), idValues.get(i));
-        }
-        final Object[] queryParams = columns.values().toArray();
-        jdbcOperations.update(updateQuery, queryParams);
-        return postUpdate(entity);      */
-        return null;
+        template.executeUpdate(sql.update(), entity, entityInformation.getUpdateUnmapper());
+        return entity;
+    }
+
+    @Override
+    public <S extends T> void update(Stream<S> entity) {
+        template.executeBatch(sql.update(), entity, entityInformation.getUpdateUnmapper());
     }
 
     protected <S extends T> S create(S entity) {
-        String query = String.format("INSERT INTO %s (%s) VALUES (%s)", tableName,
-                rowUnmapper.getColumns().stream().collect(Collectors.joining(", ")),
-                rowUnmapper.getColumns().stream().map(it -> "?").collect(Collectors.joining(", ")));
         if (generatedPK) {
-            return template.executeInsertGenerated(query, entity, (pse, it) -> rowUnmapper.prepare(pse, (S) it), rowMapper::instanceMapper);
+            return template.executeInsertGenerated(sql.insertInto(), entity, mappingData.getInsertUnmapper(), mappingData::getMapper);
         } else {
-            template.executeUpdate(query, entity, (pse, it) -> rowUnmapper.prepare(pse, (S) it));
+            template.executeUpdate(sql.insertInto(), entity, mappingData.getInsertUnmapper());
             return entity;
         }
     }
@@ -162,56 +136,68 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     @Override
     public <S extends T> Iterable<S> save(Iterable<S> entities) {
-        String query = String.format("INSERT INTO %s (%s) VALUES (%s)", tableName,
-                rowUnmapper.getColumns().stream().collect(Collectors.joining(", ")),
-                rowUnmapper.getColumns().stream().map(it -> "?").collect(Collectors.joining(", ")));
         Stream<S> stream = StreamSupport.stream(entities.spliterator(), false);
         if (generatedPK) {
-            return template.mapInsert(query, stream, (pse, it) -> rowUnmapper.prepare(pse, (S) it), rowMapper::instanceMapper)
+            return template.mapInsert(sql.insertInto(), stream, mappingData.getInsertUnmapper(), mappingData::getMapper)
                     .collect(Collectors.toList());
         } else {
-            template.executeBatch(query, stream, (pse, it) -> rowUnmapper.prepare(pse, (S) it));
+            template.executeBatch(sql.insertInto(), stream, mappingData.getInsertUnmapper());
             return entities;
         }
     }
 
     @Override
     public Iterable<T> findAll(Iterable<ID> ids) {
-        return null;
-//        final List<ID> idsList = toList(ids);
-//        if (idsList.isEmpty()) {
-//            return Collections.emptyList();
-//        }
-//        final Object[] idColumnValues = flatten(idsList);
-//        return jdbcOperations.query(sqlGenerator.selectByIds(table, idsList.size()), rowMapper, idColumnValues);
+        List<ID> idList = asList(ids);
+        int pkSize = entityInformation.getPkFields().size();
+        RelationalQuery<T> query = query(sql.selectAll(idList.size()), mappingData.getMapper());
+        for (int i = 0; i < idList.size(); i++) {
+            int c = i * pkSize + 1;
+            ID id = idList.get(i);
+            setId(id, query, c);
+        }
+        return query.list();
+    }
+
+    private static <T> List<T> asList(Iterable<T> iterable) {
+        if (iterable instanceof ArrayList)
+            return (List<T>) iterable;
+
+        final List<T> result = new ArrayList<>();
+        for (T item : iterable) {
+            result.add(item);
+        }
+        return result;
     }
 
     @Override
     public List<T> findAll(Sort sort) {
-        return null; //jdbcOperations.query(sqlGenerator.selectAll(table, sort), rowMapper);
+        return query(sql.selectAll(sort), mappingData.getMapper()).list();
     }
 
     @Override
     public Page<T> findAll(Pageable page) {
-        return null;
-//        String query = sqlGenerator.selectAll(table, page);
-//        return new PageImpl<T>(jdbcOperations.query(query, rowMapper), page, count());
+        List<T> content = query(sql.selectAll(page), mappingData.getMapper()).list();
+        return new PageImpl<>(content, page, query(sql.countStar(), COUNT_MAPPER).findOne());
     }
 
     public Stream<T> streamAll() {
-        return query(format("SELECT * FROM %s", tableName), rowMapper).stream();
+        return query(sql.selectAll(), mappingData.getMapper()).stream();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Stream<ID> streamAllIds() {
-        return query(format("SELECT * FROM %s", tableName), rs -> {
-            if (entityInformation.getPkFields().size() == 1)
-                return (ID) JdbcUtils.getResultSetValue(rs, 1, entityInformation.getIdType());
-            else {
-                Object[] result = new Object[entityInformation.getPkFields().size()];
+        return query(sql.selectIds(), rs -> {
+            List<FieldMappingData> pkFields = entityInformation.getPkFields();
+            if (pkFields.size() == 1) {
+                FieldMappingData fieldData = pkFields.get(0);
+                return (ID) fieldData.attributeReader.readAttribute(rs, 1, fieldData.field);
+            } else {
+                Object[] result = new Object[pkFields.size()];
                 for (int i = 0; i < result.length; i++) {
-                    result[i] = JdbcUtils.getResultSetValue(rs, i + 1);
+                    FieldMappingData fieldData = pkFields.get(i);
+                    result[i] = fieldData.attributeReader.readAttribute(rs, i + 1, fieldData.field);
                 }
                 return (ID) result;
             }

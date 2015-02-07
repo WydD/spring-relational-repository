@@ -1,14 +1,11 @@
-package fr.petitl.relational.repository.repository;
+package fr.petitl.relational.repository.template.bean;
 
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import fr.petitl.relational.repository.DBMapping;
 import fr.petitl.relational.repository.annotation.Column;
 import org.springframework.beans.BeanUtils;
 

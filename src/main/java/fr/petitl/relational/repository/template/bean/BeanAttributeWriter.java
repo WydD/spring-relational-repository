@@ -1,4 +1,4 @@
-package fr.petitl.relational.repository.repository;
+package fr.petitl.relational.repository.template.bean;
 
 import java.lang.reflect.Field;
 import java.sql.PreparedStatement;

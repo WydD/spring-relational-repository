@@ -1,13 +1,11 @@
-package fr.petitl.relational.repository.repository;
+package fr.petitl.relational.repository.template.bean;
 
 import java.lang.reflect.Field;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.springframework.jdbc.support.JdbcUtils;
 
-import static org.springframework.jdbc.core.StatementCreatorUtils.javaTypeToSqlParameterType;
 import static org.springframework.jdbc.core.StatementCreatorUtils.setParameterValue;
 
 public interface BeanAttributeReader {

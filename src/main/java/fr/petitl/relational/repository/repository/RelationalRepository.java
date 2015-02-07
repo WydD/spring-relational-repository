@@ -17,4 +17,6 @@ public interface RelationalRepository<T, ID extends Serializable> extends Paging
     public Stream<ID> streamAllIds();
 
     public <S extends T> S update(S entity);
+
+    public <S extends T> void update(Stream<S> entity);
 }
