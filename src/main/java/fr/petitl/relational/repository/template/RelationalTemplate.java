@@ -127,7 +127,8 @@ public class RelationalTemplate extends JdbcAccessor {
     public <E> Stream<E> mapInsert(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
         return executeDontClose(statement -> {
             Connection connection = statement.getConnection();
-
+            // HACK!
+            // Adding a null at the end of the stream. If we reach the null we close the resources
             return Stream.concat(input.peek(it -> {
                 if (it == null) {
                     throw new IllegalArgumentException("Null entry in the input stream");
@@ -138,36 +139,28 @@ public class RelationalTemplate extends JdbcAccessor {
                     release(connection);
                 }
                 return it != null;
-            }).map(it -> translateExceptions("StreamInsertMapping", sql, () -> {
-                if (pse != null)
-                    pse.prepare(statement, it);
-                statement.executeUpdate();
-                ResultSet rs = statement.getGeneratedKeys();
-                try {
-                    if (rs.next())
-                        keySetter.apply(it).mapRow(rs);
-                } finally {
-                    release(rs);
-                }
-                return it;
-            }));
+            }).map(it -> translateExceptions("StreamInsertMapping", sql, () -> insertAndGetKey(statement, it, pse, keySetter)));
         }, con -> con.prepareStatement(sql));
     }
 
     public <E> E executeInsertGenerated(String sql, E input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
-        return execute(statement -> {
-            if (pse != null)
-                pse.prepare(statement, input);
-            statement.executeUpdate();
+        return execute(statement -> insertAndGetKey(statement, input, pse, keySetter), con -> con.prepareStatement(sql));
+    }
+
+    protected <E> E insertAndGetKey(PreparedStatement statement, E input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) throws SQLException {
+        if (pse != null)
+            pse.prepare(statement, input);
+        statement.executeUpdate();
+        if (keySetter != null) {
             ResultSet rs = statement.getGeneratedKeys();
             try {
-                if(rs.next())
+                if (rs.next())
                     keySetter.apply(input).mapRow(rs);
             } finally {
                 release(rs);
             }
-            return input;
-        }, con -> con.prepareStatement(sql));
+        }
+        return input;
     }
 
     public <E, F> Stream<F> executeQuery(String sql, E input, StatementMapper<E> pse, RowMapper<F> rowMapper) {
@@ -231,7 +224,7 @@ public class RelationalTemplate extends JdbcAccessor {
         @Override
         public boolean hasNext() {
             boolean next = translateExceptions("StreamIteration", sql, rs::next);
-            if (!next) {
+            if (!next && onClose != null) {
                 onClose.run();
             }
             return next;
