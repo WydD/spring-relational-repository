@@ -127,7 +127,18 @@ public class RelationalTemplate extends JdbcAccessor {
     public <E> Stream<E> mapInsert(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
         return executeDontClose(statement -> {
             Connection connection = statement.getConnection();
-            return input.map(it -> translateExceptions("StreamInsertMapping", sql, () -> {
+
+            return Stream.concat(input.peek(it -> {
+                if (it == null) {
+                    throw new IllegalArgumentException("Null entry in the input stream");
+                }
+            }), Stream.of((E) null)).filter(it -> {
+                if (it == null) {
+                    release(statement);
+                    release(connection);
+                }
+                return it != null;
+            }).map(it -> translateExceptions("StreamInsertMapping", sql, () -> {
                 if (pse != null)
                     pse.prepare(statement, it);
                 statement.executeUpdate();
@@ -139,10 +150,7 @@ public class RelationalTemplate extends JdbcAccessor {
                     release(rs);
                 }
                 return it;
-            })).onClose(() -> {
-                release(statement);
-                release(connection);
-            });
+            }));
         }, con -> con.prepareStatement(sql));
     }
 
@@ -169,12 +177,11 @@ public class RelationalTemplate extends JdbcAccessor {
             ResultSet rs = statement.executeQuery();
             Connection connection = statement.getConnection();
             return StreamSupport
-                    .stream(Spliterators.spliteratorUnknownSize(new ResultSetIterator(rs, sql), 0), false)
-                    .onClose(() -> {
+                    .stream(Spliterators.spliteratorUnknownSize(new ResultSetIterator(rs, sql, () -> {
                         release(rs);
                         release(statement);
                         release(connection);
-                    })
+                    }), 0), false)
                     .map(it -> translateExceptions("StreamMapping", sql, () -> rowMapper.mapRow(it)));
         }, con -> con.prepareStatement(sql));
     }
@@ -212,16 +219,22 @@ public class RelationalTemplate extends JdbcAccessor {
 
         private ResultSet rs;
         private String sql;
+        private Runnable onClose;
 
-        public ResultSetIterator(ResultSet rs, String sql) {
+        public ResultSetIterator(ResultSet rs, String sql, Runnable onClose) {
             this.rs = rs;
             this.sql = sql;
+            this.onClose = onClose;
         }
 
 
         @Override
         public boolean hasNext() {
-            return translateExceptions("StreamIteration", sql, rs::next);
+            boolean next = translateExceptions("StreamIteration", sql, rs::next);
+            if (!next) {
+                onClose.run();
+            }
+            return next;
         }
 
         @Override
