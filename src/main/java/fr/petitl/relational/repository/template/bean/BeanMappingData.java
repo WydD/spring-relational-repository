@@ -33,7 +33,8 @@ public class BeanMappingData<T> {
         tableAnnotation = clazz.getDeclaredAnnotation(Table.class);
 
         for (Field field : clazz.getDeclaredFields()) {
-            if (Modifier.isTransient(field.getModifiers()))
+            if (Modifier.isTransient(field.getModifiers()) ||
+                    Modifier.isStatic(field.getModifiers()))
                 continue;
             String colName = null;
             BeanAttributeReader reader;
@@ -94,11 +95,6 @@ public class BeanMappingData<T> {
     @SuppressWarnings("unchecked")
     public <S extends T> RowMapper<S> getMapper() {
         return (BeanMapper<S>) mapper;
-    }
-
-    @SuppressWarnings("unchecked")
-    public <S extends T> RowMapper<S> getMapper(S data) {
-        return mapper.instanceMapper(data);
     }
 
     @SuppressWarnings("unchecked")

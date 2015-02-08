@@ -3,10 +3,12 @@ package fr.petitl.relational.repository.support;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.function.Function;
 
 import fr.petitl.relational.repository.annotation.PK;
+import fr.petitl.relational.repository.template.RowMapper;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.BeanUnmapper;
 import fr.petitl.relational.repository.template.bean.FieldMappingData;
@@ -22,6 +24,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
     private final Class<?> idType;
     private final List<FieldMappingData> pkFields;
     private final HashSet<FieldMappingData> pkSet;
+    private Function<T, RowMapper<T>> idSetter;
     private BeanMappingData<T> mappingData;
     private final BeanUnmapper<T> updateUnmapper;
 
@@ -36,11 +39,17 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
 
         // Get the sorted
         TreeMap<Integer, FieldMappingData> pks = new TreeMap<>();
-        boolean generated = false;
+        FieldMappingData generated = null;
         for (FieldMappingData fieldData : mappingData.getFieldData()) {
             PK declaredAnnotation = fieldData.field.getDeclaredAnnotation(PK.class);
             if (declaredAnnotation != null) {
-                generated = declaredAnnotation.generated();
+                if(declaredAnnotation.generated()) {
+                    if (generated != null) {
+                        throw new UnsupportedOperationException("Two generated columns are not supported yet");
+                    }
+                    generated = fieldData;
+                }
+
                 FieldMappingData old = pks.put(declaredAnnotation.order(), fieldData);
                 if (old != null) {
                     throw new IllegalStateException("Two primary keys with the same order");
@@ -50,7 +59,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         if (pks.isEmpty()) {
             throw new IllegalStateException("No primary keys specified");
         }
-        this.generatedPK = generated;
+        this.generatedPK = generated != null;
 
         pkSet = new HashSet<>(pks.values());
         pkFields = new ArrayList<>(pks.values());
@@ -82,6 +91,18 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
                 }
             };
         }
+        if (generatedPK) {
+            final FieldMappingData finalGenerated = generated;
+            idSetter = (T instance) -> (ResultSet rs) -> {
+                try {
+                    Object id = finalGenerated.attributeReader.readAttribute(rs, 1, finalGenerated.field);
+                    finalGenerated.writeMethod.invoke(instance, id);
+                    return instance;
+                } catch (InvocationTargetException | IllegalAccessException e) {
+                    throw new IllegalStateException(e);
+                }
+            };
+        }
 
         LinkedList<FieldMappingData> list = new LinkedList<>();
         mappingData.getFieldData().stream().filter(it -> !pkSet.contains(it)).forEach(list::add);
@@ -103,6 +124,11 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
     @Override
     public Class<ID> getIdType() {
         return (Class<ID>) idType;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <S extends T> RowMapper<S> setId(S entity) {
+        return (RowMapper<S>) idSetter.apply(entity);
     }
 
     public boolean isGeneratedPK() {

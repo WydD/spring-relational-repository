@@ -133,7 +133,8 @@ public class RelationalTemplate extends JdbcAccessor {
                 statement.executeUpdate();
                 ResultSet rs = statement.getGeneratedKeys();
                 try {
-                    keySetter.apply(it).mapRow(rs);
+                    if (rs.next())
+                        keySetter.apply(it).mapRow(rs);
                 } finally {
                     release(rs);
                 }
@@ -152,7 +153,8 @@ public class RelationalTemplate extends JdbcAccessor {
             statement.executeUpdate();
             ResultSet rs = statement.getGeneratedKeys();
             try {
-                keySetter.apply(input).mapRow(rs);
+                if(rs.next())
+                    keySetter.apply(input).mapRow(rs);
             } finally {
                 release(rs);
             }

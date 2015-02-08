@@ -64,7 +64,7 @@ public class BeanSQLGeneration<T, ID extends Serializable> {
         fromTable = FROM + tableName;
 
         insertInto = format("INSERT INTO %s (%s) VALUES (%s)", tableName, columnList, questionMarks(fields.size()));
-        update = format("UPDATE %s SET %s WHERE %s", tableName, updateSet, whereId);
+        update = format("UPDATE %s SET %s %s", tableName, updateSet, whereId);
     }
 
     public String countStar() {

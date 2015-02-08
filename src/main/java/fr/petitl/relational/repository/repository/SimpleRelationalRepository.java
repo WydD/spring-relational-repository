@@ -8,13 +8,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import fr.petitl.relational.repository.repository.sql.BeanSQLGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.RelationalQuery;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.FieldMappingData;
-import fr.petitl.relational.repository.repository.sql.BeanSQLGeneration;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -115,18 +116,29 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     @Override
     public <S extends T> S update(S entity) {
-        template.executeUpdate(sql.update(), entity, entityInformation.getUpdateUnmapper());
+        int number = template.executeUpdate(sql.update(), entity, entityInformation.getUpdateUnmapper());
+        if (number != 1) {
+            throw new IncorrectResultSizeDataAccessException(1, number);
+        }
         return entity;
     }
 
     @Override
     public <S extends T> void update(Stream<S> entity) {
-        template.executeBatch(sql.update(), entity, entityInformation.getUpdateUnmapper());
+        int[] count = new int[]{0};
+        int[] result = template.executeBatch(sql.update(), entity.peek(it -> count[0]++), entityInformation.getUpdateUnmapper());
+        for (int res : result) {
+            if(res != 1) {
+                throw new IncorrectResultSizeDataAccessException(1, res);
+            }
+        }
+        if (count[0] != result.length)
+            throw new IncorrectResultSizeDataAccessException(count[0], result.length);
     }
 
     protected <S extends T> S create(S entity) {
         if (generatedPK) {
-            return template.executeInsertGenerated(sql.insertInto(), entity, mappingData.getInsertUnmapper(), mappingData::getMapper);
+            return template.executeInsertGenerated(sql.insertInto(), entity, mappingData.getInsertUnmapper(), entityInformation::setId);
         } else {
             template.executeUpdate(sql.insertInto(), entity, mappingData.getInsertUnmapper());
             return entity;
@@ -138,7 +150,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     public <S extends T> Iterable<S> save(Iterable<S> entities) {
         Stream<S> stream = StreamSupport.stream(entities.spliterator(), false);
         if (generatedPK) {
-            return template.mapInsert(sql.insertInto(), stream, mappingData.getInsertUnmapper(), mappingData::getMapper)
+            return template.mapInsert(sql.insertInto(), stream, mappingData.getInsertUnmapper(), entityInformation::setId)
                     .collect(Collectors.toList());
         } else {
             template.executeBatch(sql.insertInto(), stream, mappingData.getInsertUnmapper());
@@ -147,7 +159,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     @Override
-    public Iterable<T> findAll(Iterable<ID> ids) {
+    public List<T> findAll(Iterable<ID> ids) {
         List<ID> idList = asList(ids);
         int pkSize = entityInformation.getPkFields().size();
         RelationalQuery<T> query = query(sql.selectAll(idList.size()), mappingData.getMapper());
@@ -202,5 +214,9 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
                 return (ID) result;
             }
         }).stream();
+    }
+
+    protected RelationalTemplate getTemplate() {
+        return template;
     }
 }
