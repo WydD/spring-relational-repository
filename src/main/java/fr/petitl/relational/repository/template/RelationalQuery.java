@@ -76,7 +76,9 @@ public class RelationalQuery<E> {
     }
 
     public List<E> list() {
-        return stream().collect(Collectors.toList());
+        try(Stream<E> out = stream()) {
+            return out.collect(Collectors.toList());
+        }
     }
 
     public int update() {

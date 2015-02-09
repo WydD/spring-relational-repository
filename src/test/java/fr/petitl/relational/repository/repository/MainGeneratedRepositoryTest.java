@@ -210,15 +210,19 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testStreamAll() throws Exception {
-        Map<Integer, MainGenerated> result = repository.streamAll().collect(Collectors.toMap(MainGenerated::getId, it -> it));
-        verifyPojo1(result.get(1));
-        verifyPojo2(result.get(2));
-        verifyPojo3(result.get(3));
+        try (Stream<MainGenerated> out = repository.streamAll()) {
+            Map<Integer, MainGenerated> result = out.collect(Collectors.toMap(MainGenerated::getId, it -> it));
+            verifyPojo1(result.get(1));
+            verifyPojo2(result.get(2));
+            verifyPojo3(result.get(3));
+        }
     }
 
     @Test
     public void testStreamAllIds() throws Exception {
-        assertEquals(Sets.newHashSet(1, 2, 3), repository.streamAllIds().collect(Collectors.toSet()));
+        try (Stream<Integer> out = repository.streamAllIds()) {
+            assertEquals(Sets.newHashSet(1, 2, 3), out.collect(Collectors.toSet()));
+        }
     }
 
     protected void verifyFindAll(Collection<MainGenerated> all, Integer... ids) {

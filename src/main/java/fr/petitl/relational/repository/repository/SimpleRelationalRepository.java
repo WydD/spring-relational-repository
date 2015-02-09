@@ -150,8 +150,9 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     public <S extends T> Iterable<S> save(Iterable<S> entities) {
         Stream<S> stream = StreamSupport.stream(entities.spliterator(), false);
         if (generatedPK) {
-            return template.mapInsert(sql.insertInto(), stream, mappingData.getInsertUnmapper(), entityInformation::setId)
-                    .collect(Collectors.toList());
+            try (Stream<S> output = template.mapInsert(sql.insertInto(), stream, mappingData.getInsertUnmapper(), entityInformation::setId)) {
+                return output.collect(Collectors.toList());
+            }
         } else {
             template.executeBatch(sql.insertInto(), stream, mappingData.getInsertUnmapper());
             return entities;

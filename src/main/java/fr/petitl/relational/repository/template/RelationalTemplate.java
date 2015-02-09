@@ -86,7 +86,7 @@ public class RelationalTemplate extends JdbcAccessor {
                     if (stmt instanceof CallableStatement) {
                         //noinspection unchecked
                         stmt = (E) nativeJdbcExtractor.getNativeCallableStatement((CallableStatement) stmt);
-                    } else if(stmt instanceof PreparedStatement) {
+                    } else if (stmt instanceof PreparedStatement) {
                         //noinspection unchecked
                         stmt = (E) nativeJdbcExtractor.getNativePreparedStatement((PreparedStatement) stmt);
                     } else {
@@ -112,6 +112,7 @@ public class RelationalTemplate extends JdbcAccessor {
                     pse.prepare(statement, e);
                 statement.addBatch();
             }
+            input.close();
             return statement.executeBatch();
         }, con -> con.prepareStatement(sql));
     }
@@ -127,18 +128,9 @@ public class RelationalTemplate extends JdbcAccessor {
     public <E> Stream<E> mapInsert(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
         return executeDontClose(statement -> {
             Connection connection = statement.getConnection();
-            // HACK!
-            // Adding a null at the end of the stream. If we reach the null we close the resources
-            return Stream.concat(input.peek(it -> {
-                if (it == null) {
-                    throw new IllegalArgumentException("Null entry in the input stream");
-                }
-            }), Stream.of((E) null)).filter(it -> {
-                if (it == null) {
-                    release(statement);
-                    release(connection);
-                }
-                return it != null;
+            return input.onClose(() -> {
+                release(statement);
+                release(connection);
             }).map(it -> translateExceptions("StreamInsertMapping", sql, () -> insertAndGetKey(statement, it, pse, keySetter)));
         }, con -> con.prepareStatement(sql));
     }
@@ -169,13 +161,11 @@ public class RelationalTemplate extends JdbcAccessor {
                 pse.prepare(statement, input);
             ResultSet rs = statement.executeQuery();
             Connection connection = statement.getConnection();
-            return StreamSupport
-                    .stream(Spliterators.spliteratorUnknownSize(new ResultSetIterator(rs, sql, () -> {
-                        release(rs);
-                        release(statement);
-                        release(connection);
-                    }), 0), false)
-                    .map(it -> translateExceptions("StreamMapping", sql, () -> rowMapper.mapRow(it)));
+            return StreamSupport.stream(Spliterators.spliteratorUnknownSize(new ResultSetIterator(rs, sql), 0), false).onClose(() -> {
+                release(rs);
+                release(statement);
+                release(connection);
+            }).map(it -> translateExceptions("StreamMapping", sql, () -> rowMapper.mapRow(it)));
         }, con -> con.prepareStatement(sql));
     }
 
@@ -212,22 +202,16 @@ public class RelationalTemplate extends JdbcAccessor {
 
         private ResultSet rs;
         private String sql;
-        private Runnable onClose;
 
-        public ResultSetIterator(ResultSet rs, String sql, Runnable onClose) {
+        public ResultSetIterator(ResultSet rs, String sql) {
             this.rs = rs;
             this.sql = sql;
-            this.onClose = onClose;
         }
 
 
         @Override
         public boolean hasNext() {
-            boolean next = translateExceptions("StreamIteration", sql, rs::next);
-            if (!next && onClose != null) {
-                onClose.run();
-            }
-            return next;
+            return translateExceptions("StreamIteration", sql, rs::next);
         }
 
         @Override
