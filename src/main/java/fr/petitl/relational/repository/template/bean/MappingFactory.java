@@ -3,15 +3,17 @@ package fr.petitl.relational.repository.template.bean;
 import java.util.HashMap;
 import java.util.Map;
 
+import fr.petitl.relational.repository.template.RowMapper;
+
 /**
  *
  */
-public class BeanMappingFactory {
+public class MappingFactory {
 
     private static Map<Class, BeanMappingData> cache = new HashMap<>();
 
     @SuppressWarnings("unchecked")
-    public synchronized static <T> BeanMappingData<T> get(Class<T> clazz) {
+    public synchronized static <T> BeanMappingData<T> beanMapping(Class<T> clazz) {
         BeanMappingData data = cache.get(clazz);
         if (data == null) {
             BeanMappingData<T> result = new BeanMappingData<T>(clazz);
@@ -20,5 +22,4 @@ public class BeanMappingFactory {
         }
         return data;
     }
-
 }

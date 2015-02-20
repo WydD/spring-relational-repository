@@ -2,17 +2,15 @@ package fr.petitl.relational.repository.support;
 
 import java.io.Serializable;
 
-import fr.petitl.relational.repository.query.JdbcQueryMethod;
+import fr.petitl.relational.repository.query.RelationalRepositoryQueryMethod;
 import fr.petitl.relational.repository.query.Query;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.repository.SimpleRelationalRepository;
-import fr.petitl.relational.repository.template.bean.BeanMappingFactory;
+import fr.petitl.relational.repository.template.bean.MappingFactory;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 import org.springframework.data.repository.query.EvaluationContextProvider;
 import org.springframework.data.repository.query.QueryLookupStrategy;
-import org.springframework.data.repository.query.parser.Part;
-import org.springframework.data.repository.query.parser.PartTree;
 
 /**
  *
@@ -27,7 +25,7 @@ public class RelationalRepositoryFactorySupport extends RepositoryFactorySupport
 
     @Override
     public <T, ID extends Serializable> RelationalEntityInformation<T, ID> getEntityInformation(Class<T> c) {
-        return new RelationalEntityInformation<>(BeanMappingFactory.get(c));
+        return new RelationalEntityInformation<>(MappingFactory.beanMapping(c));
     }
 
     @Override
@@ -43,18 +41,21 @@ public class RelationalRepositoryFactorySupport extends RepositoryFactorySupport
     @Override
     protected QueryLookupStrategy getQueryLookupStrategy(QueryLookupStrategy.Key key, EvaluationContextProvider evaluationContextProvider) {
         return (method, metadata, namedQueries) -> {
-            JdbcQueryMethod queryMethod = new JdbcQueryMethod(method, metadata);
+            RelationalRepositoryQueryMethod queryMethod = new RelationalRepositoryQueryMethod(method, metadata, operations);
 
             Query annotation = queryMethod.getAnnotation();
-            PartTree  p = new PartTree(method.getName(), metadata.getDomainType());
-            for (PartTree.OrPart orPart : p) {
-                orPart.toString();
-                for (Part part : orPart) {
-                    part.getProperty();
-                }
+            if (annotation == null) {
+                throw new IllegalStateException("Methods without @Query are not supported yet.");
+//                PartTree p = new PartTree(method.getName(), metadata.getDomainType());
+//                for (PartTree.OrPart orPart : p) {
+//                    orPart.toString();
+//                    for (Part part : orPart) {
+//                        part.getProperty();
+//                    }
+//                }
+            } else {
+                return queryMethod.createAnnotationBased();
             }
-
-            return null;
         };
     }
 }

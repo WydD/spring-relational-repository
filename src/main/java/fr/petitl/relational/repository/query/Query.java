@@ -15,5 +15,5 @@ import fr.petitl.relational.repository.template.RowMapper;
 public @interface Query {
     public String value();
 
-    public Class<? extends RowMapper> mapper() default RowMapper.class;
+//    public Class<? extends RowMapper> mapper() default RowMapper.class;
 }

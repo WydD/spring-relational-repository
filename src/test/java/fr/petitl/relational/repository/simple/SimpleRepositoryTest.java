@@ -61,6 +61,12 @@ public class SimpleRepositoryTest extends SpringTest {
     }
 
     @Test
+    public void testGeneratedMethod() {
+        Pojo hey = repository.testGet("ho");
+        Assert.assertEquals("hey", hey.getId());
+    }
+
+    @Test
     public void testCustomImpl() {
         Assert.assertEquals(42, repository.dummy());
     }

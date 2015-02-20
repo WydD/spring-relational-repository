@@ -18,6 +18,8 @@ public class RelationalQuery<E> {
     private final SqlQuery sql;
     private final RelationalTemplate template;
     private RowMapper<E> mapper;
+    private boolean preparing = true;
+
     private Function<Object, ColumnMapper> defaultSetter = (obj) -> (ps, i) -> {
         setParameterValue(ps, i, javaTypeToSqlParameterType(obj.getClass()), obj);
     };
@@ -51,6 +53,10 @@ public class RelationalQuery<E> {
     }
 
     private RelationalQuery<E> setParameter(List<Integer> resolved, ColumnMapper prepare) {
+        if (!preparing) {
+            clearParameters();
+            preparing = true;
+        }
         if (resolved.size() == 1) {
             Integer idx = resolved.get(0);
             return addPrepareStep(ps -> prepare.prepareColumn(ps, idx));
@@ -60,6 +66,10 @@ public class RelationalQuery<E> {
                 prepare.prepareColumn(ps, idx);
             }
         });
+    }
+
+    public void clearParameters() {
+        toPrepare.clear();
     }
 
     public RelationalQuery<E> addPrepareStep(PrepareStep prepareColumn) {
@@ -89,7 +99,12 @@ public class RelationalQuery<E> {
         return template.executeUpdate(sql.getNativeSql(), null, getPrepareStatement());
     }
 
+    public SqlQuery getSql() {
+        return sql;
+    }
+
     private StatementMapper<Object> getPrepareStatement() {
+        preparing = false;
         // No prepare is necessary if no operation has been made
         if (toPrepare.isEmpty())
             return null;

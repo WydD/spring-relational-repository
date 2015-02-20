@@ -84,10 +84,6 @@ public class BeanMappingData<T> {
         return new ArrayList<>(fields.values());
     }
 
-    public FieldMappingData field(Field field) {
-        return fields.get(field);
-    }
-
     public String camelToSnakeCase(String camelCase) {
         return this.camelCasePattern.matcher(camelCase).replaceAll("$1_$2").toLowerCase();
     }

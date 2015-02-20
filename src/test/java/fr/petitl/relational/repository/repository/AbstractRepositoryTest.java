@@ -13,7 +13,7 @@ import fr.petitl.relational.repository.SpringTest;
 import fr.petitl.relational.repository.repository.model.MainGenerated;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.RelationalTemplate;
-import fr.petitl.relational.repository.template.bean.BeanMappingFactory;
+import fr.petitl.relational.repository.template.bean.MappingFactory;
 
 import static org.junit.Assert.*;
 
@@ -29,7 +29,7 @@ public abstract class AbstractRepositoryTest {
     protected <T, ID extends Serializable> SimpleRelationalRepository<T, ID> getRepository(Class<T> clazz, String... sql) {
         DataSource ds = SpringTest.createEmbbededDataSource(sql);
         RelationalTemplate template = new RelationalTemplate(ds);
-        return new SimpleRelationalRepository<>(new RelationalEntityInformation<>(BeanMappingFactory.get(clazz)), template);
+        return new SimpleRelationalRepository<>(new RelationalEntityInformation<>(MappingFactory.beanMapping(clazz)), template);
     }
 
     protected void verifyDeleted(SimpleRelationalRepository<MainGenerated, Integer> repository, int count, Integer... missingIds) throws SQLException {
