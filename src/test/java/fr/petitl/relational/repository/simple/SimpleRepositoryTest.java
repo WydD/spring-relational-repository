@@ -64,6 +64,16 @@ public class SimpleRepositoryTest extends SpringTest {
     public void testGeneratedMethod() {
         Pojo hey = repository.testGet("ho");
         Assert.assertEquals("hey", hey.getId());
+        Pojo hey2 = repository.testGet("oh no!");
+        Assert.assertNull(hey2);
+    }
+
+    @Test
+    public void testGeneratedPositionalMethod() {
+        Pojo hey = repository.testGetPositional("ho");
+        Assert.assertEquals("hey", hey.getId());
+        Pojo hey2 = repository.testGetPositional("oh no!");
+        Assert.assertNull(hey2);
     }
 
     @Test
