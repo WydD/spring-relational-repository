@@ -5,6 +5,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import fr.petitl.relational.repository.template.RowMapper;
+
 /**
  *
  */
@@ -12,4 +14,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Query {
     public String value();
+
+    public Class<? extends RowMapper> mapper() default RowMapper.class;
 }

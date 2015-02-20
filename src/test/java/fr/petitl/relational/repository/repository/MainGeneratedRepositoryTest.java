@@ -5,7 +5,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -210,19 +209,21 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testStreamAll() throws Exception {
-        try (Stream<MainGenerated> out = repository.streamAll()) {
+        assertEquals(Integer.valueOf(1), repository.fetchAll(out -> {
             Map<Integer, MainGenerated> result = out.collect(Collectors.toMap(MainGenerated::getId, it -> it));
             verifyPojo1(result.get(1));
             verifyPojo2(result.get(2));
             verifyPojo3(result.get(3));
-        }
+            return 1;
+        }));
     }
 
     @Test
     public void testStreamAllIds() throws Exception {
-        try (Stream<Integer> out = repository.streamAllIds()) {
+        assertTrue(repository.fetchAllIds(out -> {
             assertEquals(Sets.newHashSet(1, 2, 3), out.collect(Collectors.toSet()));
-        }
+            return true;
+        }));
     }
 
     protected void verifyFindAll(Collection<MainGenerated> all, Integer... ids) {

@@ -169,10 +169,6 @@ public class RelationalTemplate extends JdbcAccessor {
         }, con -> con.prepareStatement(sql));
     }
 
-    public <E, F> F executeOne(String sql, E input, StatementMapper<E> pse, RowMapper<F> rowMapper) {
-        return executeQuery(sql, input, pse, rowMapper).findFirst().orElse(null);
-    }
-
     protected interface JdbcCallback<E> {
         public E execute() throws SQLException;
     }

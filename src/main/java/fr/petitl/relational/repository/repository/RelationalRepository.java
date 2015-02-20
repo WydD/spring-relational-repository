@@ -2,6 +2,7 @@ package fr.petitl.relational.repository.repository;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.springframework.data.repository.NoRepositoryBean;
@@ -14,9 +15,9 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 public interface RelationalRepository<T, ID extends Serializable> extends PagingAndSortingRepository<T, ID> {
     public List<T> findAll(Iterable<ID> ids);
 
-    public Stream<T> streamAll();
+    public <F> F fetchAll(Function<Stream<T>, F> apply);
 
-    public Stream<ID> streamAllIds();
+    public <F> F fetchAllIds(Function<Stream<ID>, F> apply);
 
     public <S extends T> S update(S entity);
 

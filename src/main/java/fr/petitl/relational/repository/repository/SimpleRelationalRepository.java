@@ -101,7 +101,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     @Override
     public List<T> findAll() {
-        return streamAll().collect(Collectors.toList());
+        return fetchAll(stream -> stream.collect(Collectors.toList()));
     }
 
     @Override
@@ -194,13 +194,14 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         return new PageImpl<>(content, page, query(sql.countStar(), COUNT_MAPPER).findOne());
     }
 
-    public Stream<T> streamAll() {
-        return query(sql.selectAll(), mappingData.getMapper()).stream();
+    @Override
+    public <F> F fetchAll(Function<Stream<T>, F> apply) {
+        return query(sql.selectAll(), mappingData.getMapper()).fetch(apply);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public Stream<ID> streamAllIds() {
+    public <F> F fetchAllIds(Function<Stream<ID>, F> apply) {
         return query(sql.selectIds(), rs -> {
             List<FieldMappingData> pkFields = entityInformation.getPkFields();
             if (pkFields.size() == 1) {
@@ -214,7 +215,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
                 }
                 return (ID) result;
             }
-        }).stream();
+        }).fetch(apply);
     }
 
     protected RelationalTemplate getTemplate() {

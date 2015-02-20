@@ -67,18 +67,22 @@ public class RelationalQuery<E> {
         return this;
     }
 
-    public E findOne() {
-        return template.executeOne(sql.getNativeSql(), null, getPrepareStatement(), mapper);
-    }
-
-    public Stream<E> stream() {
+    private Stream<E> stream() {
         return template.executeQuery(sql.getNativeSql(), null, getPrepareStatement(), mapper);
     }
 
-    public List<E> list() {
+    public <F> F fetch(Function<Stream<E>, F> transformer) {
         try(Stream<E> out = stream()) {
-            return out.collect(Collectors.toList());
+            return transformer.apply(out);
         }
+    }
+
+    public List<E> list() {
+        return fetch(stream -> stream.collect(Collectors.toList()));
+    }
+
+    public E findOne() {
+        return fetch(stream -> stream.findFirst().orElse(null));
     }
 
     public int update() {
