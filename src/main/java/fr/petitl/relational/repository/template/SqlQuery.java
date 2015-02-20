@@ -162,7 +162,7 @@ public class SqlQuery {
             }
             builder.append(c);
         }
-        return new SqlQuery(type, sql, builder.toString(), namedParameters, positionParameters, parameterCount-1);
+        return new SqlQuery(type, sql, builder.toString(), namedParameters, positionParameters, parameterCount - 1);
     }
 
     protected static String extract(int start, int length, String sql) {

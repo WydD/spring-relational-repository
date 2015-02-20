@@ -3,8 +3,6 @@ package fr.petitl.relational.repository.template.bean;
 import java.util.HashMap;
 import java.util.Map;
 
-import fr.petitl.relational.repository.template.RowMapper;
-
 /**
  *
  */

@@ -4,8 +4,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
-*
-*/
+ *
+ */
 public class FieldMappingData {
     public String columnName;
     public Field field;

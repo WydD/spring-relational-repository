@@ -128,7 +128,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         int[] count = new int[]{0};
         int[] result = template.executeBatch(sql.update(), entity.peek(it -> count[0]++), entityInformation.getUpdateUnmapper());
         for (int res : result) {
-            if(res != 1) {
+            if (res != 1) {
                 throw new IncorrectResultSizeDataAccessException(1, res);
             }
         }

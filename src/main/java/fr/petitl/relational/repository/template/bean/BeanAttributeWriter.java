@@ -14,6 +14,8 @@ public interface BeanAttributeWriter {
 
     public static class Default implements BeanAttributeWriter {
         public static final BeanAttributeWriter INSTANCE = new Default();
-        private Default() {}
+
+        private Default() {
+        }
     }
 }

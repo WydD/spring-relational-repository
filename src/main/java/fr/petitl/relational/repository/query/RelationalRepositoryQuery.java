@@ -24,7 +24,7 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
     public RelationalRepositoryQuery(String sql, RelationalTemplate template,
                                      RowMapper<S> mapper, QueryMethod method,
                                      Function<Stream<S>, S> fetchMethod,
-                                     Parameters<?, ?> parametersConfiguration){
+                                     Parameters<?, ?> parametersConfiguration) {
         this.method = method;
         this.fetchMethod = fetchMethod;
         this.parametersConfig = parametersConfiguration;
@@ -42,7 +42,7 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
                     relationalQuery.getSql().resolve(parameter.getIndex());
                 }
             } catch (IllegalArgumentException | IllegalStateException e) {
-                throw new IllegalMappingException("Impossible to map parameter "+parameter.toString()+" in method "+method.toString(), e);
+                throw new IllegalMappingException("Impossible to map parameter " + parameter.toString() + " in method " + method.toString(), e);
             }
         }
     }

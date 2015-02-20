@@ -82,7 +82,7 @@ public class RelationalQuery<E> {
     }
 
     public <F> F fetch(Function<Stream<E>, F> transformer) {
-        try(Stream<E> out = stream()) {
+        try (Stream<E> out = stream()) {
             return transformer.apply(out);
         }
     }

@@ -2,10 +2,10 @@ package fr.petitl.relational.repository.support;
 
 import java.io.Serializable;
 
-import fr.petitl.relational.repository.query.RelationalRepositoryQueryMethod;
 import fr.petitl.relational.repository.query.Query;
-import fr.petitl.relational.repository.template.RelationalTemplate;
+import fr.petitl.relational.repository.query.RelationalRepositoryQueryMethod;
 import fr.petitl.relational.repository.repository.SimpleRelationalRepository;
+import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.bean.MappingFactory;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;

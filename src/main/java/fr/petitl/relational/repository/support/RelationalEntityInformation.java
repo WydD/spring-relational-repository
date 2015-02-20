@@ -35,7 +35,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         this.mappingData = mappingData;
 
         if (mappingData.getTableAnnotation() == null)
-            throw new IllegalStateException("Bean class "+ mappingData.getBeanClass().getCanonicalName()+" has no @Table annotation");
+            throw new IllegalStateException("Bean class " + mappingData.getBeanClass().getCanonicalName() + " has no @Table annotation");
 
         // Get the sorted
         TreeMap<Integer, FieldMappingData> pks = new TreeMap<>();
@@ -43,7 +43,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         for (FieldMappingData fieldData : mappingData.getFieldData()) {
             PK declaredAnnotation = fieldData.field.getDeclaredAnnotation(PK.class);
             if (declaredAnnotation != null) {
-                if(declaredAnnotation.generated()) {
+                if (declaredAnnotation.generated()) {
                     if (generated != null) {
                         throw new UnsupportedOperationException("Two generated columns are not supported yet");
                     }

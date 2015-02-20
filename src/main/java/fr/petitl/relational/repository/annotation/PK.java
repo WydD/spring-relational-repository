@@ -13,5 +13,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PK {
     int order() default 1;
+
     boolean generated() default false;
 }

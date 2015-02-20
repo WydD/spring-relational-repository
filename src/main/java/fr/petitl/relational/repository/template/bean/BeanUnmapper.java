@@ -3,7 +3,6 @@ package fr.petitl.relational.repository.template.bean;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.List;
 
 import fr.petitl.relational.repository.template.StatementMapper;

@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.QueryLookupStrategy;
 
 /**
  *
-*/
+ */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -19,11 +19,13 @@ import org.springframework.data.repository.query.QueryLookupStrategy;
 public @interface EnableRelationalRepositories {
 
     String[] value() default {};
+
     String[] basePackages() default {};
 
     Class<?>[] basePackageClasses() default {};
 
     ComponentScan.Filter[] includeFilters() default {};
+
     ComponentScan.Filter[] excludeFilters() default {};
 
     String repositoryImplementationPostfix() default "Impl";
