@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 import fr.petitl.relational.repository.annotation.Column;
 import fr.petitl.relational.repository.annotation.Table;
+import fr.petitl.relational.repository.dialect.BeanDialect;
 import fr.petitl.relational.repository.template.RowMapper;
 import org.springframework.beans.BeanUtils;
 
@@ -30,7 +31,7 @@ public class BeanMappingData<T> {
     private Map<String, FieldMappingData> columns = new HashMap<>();
     private final Table tableAnnotation;
 
-    public BeanMappingData(Class<T> clazz) {
+    public BeanMappingData(Class<T> clazz, BeanDialect dialect) {
         this.clazz = clazz;
 
         tableAnnotation = clazz.getDeclaredAnnotation(Table.class);
@@ -40,23 +41,30 @@ public class BeanMappingData<T> {
                     Modifier.isStatic(field.getModifiers()))
                 continue;
             String colName = null;
-            BeanAttributeReader reader;
-            BeanAttributeWriter writer;
+            BeanAttributeReader reader = null;
+            BeanAttributeWriter writer = null;
             Column annotation = field.getDeclaredAnnotation(Column.class);
-            if (annotation == null) {
-                reader = BeanAttributeReader.Default.INSTANCE;
-                writer = BeanAttributeWriter.Default.INSTANCE;
-            } else {
+            if (annotation != null) {
                 colName = annotation.name();
                 try {
-                    reader = annotation.reader().newInstance();
-                    writer = annotation.writer().newInstance();
+                    // Create mapper instances, dont do it if it's VoidBeanMapper which is only a place holder
+                    Class<? extends BeanAttributeReader> readerClass = annotation.reader();
+                    if (!readerClass.equals(VoidBeanAttributeMapper.class))
+                        reader = readerClass.newInstance();
+
+                    Class<? extends BeanAttributeWriter> writerClass = annotation.writer();
+                    if (!writerClass.equals(VoidBeanAttributeMapper.class))
+                        writer = writerClass.newInstance();
                 } catch (InstantiationException | IllegalAccessException e) {
                     throw new IllegalStateException(e);
                 }
             }
             if (colName == null || colName.isEmpty())
                 colName = camelToSnakeCase(field.getName());
+            if (reader == null)
+                reader = dialect.defaultReader();
+            if (writer == null)
+                writer = dialect.defaultWriter();
 
             PropertyDescriptor f = BeanUtils.getPropertyDescriptor(field.getDeclaringClass(), field.getName());
             if (f == null)

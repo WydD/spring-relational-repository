@@ -28,6 +28,6 @@ public class RelationalRepositoryFactoryBean<T extends Repository<S, ID>, S, ID 
     @Override
     public void afterPropertiesSet() {
         super.afterPropertiesSet();
-        Assert.notNull(operations, "MongoTemplate must not be null!");
+        Assert.notNull(operations, "RelationalTemplate must not be null!");
     }
 }

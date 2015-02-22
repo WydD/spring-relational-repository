@@ -2,18 +2,18 @@ package fr.petitl.relational.repository.repository;
 
 import javax.sql.DataSource;
 import java.io.Serializable;
-import java.util.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Date;
 
 import fr.petitl.relational.repository.SpringTest;
+import fr.petitl.relational.repository.dialect.generic.GenericBeanDialect;
 import fr.petitl.relational.repository.repository.model.MainGenerated;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.RelationalTemplate;
-import fr.petitl.relational.repository.template.bean.MappingFactory;
 
 import static org.junit.Assert.*;
 
@@ -28,8 +28,8 @@ public abstract class AbstractRepositoryTest {
 
     protected <T, ID extends Serializable> SimpleRelationalRepository<T, ID> getRepository(Class<T> clazz, String... sql) {
         DataSource ds = SpringTest.createEmbbededDataSource(sql);
-        RelationalTemplate template = new RelationalTemplate(ds);
-        return new SimpleRelationalRepository<>(new RelationalEntityInformation<>(MappingFactory.beanMapping(clazz)), template);
+        RelationalTemplate template = new RelationalTemplate(ds, new GenericBeanDialect());
+        return new SimpleRelationalRepository<>(new RelationalEntityInformation<>(template.getMappingData(clazz)), template);
     }
 
     protected void verifyDeleted(SimpleRelationalRepository<MainGenerated, Integer> repository, int count, Integer... missingIds) throws SQLException {

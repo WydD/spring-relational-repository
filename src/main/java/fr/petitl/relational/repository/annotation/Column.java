@@ -4,6 +4,7 @@ import java.lang.annotation.*;
 
 import fr.petitl.relational.repository.template.bean.BeanAttributeReader;
 import fr.petitl.relational.repository.template.bean.BeanAttributeWriter;
+import fr.petitl.relational.repository.template.bean.VoidBeanAttributeMapper;
 
 /**
  *
@@ -14,7 +15,7 @@ import fr.petitl.relational.repository.template.bean.BeanAttributeWriter;
 public @interface Column {
     String name() default "";
 
-    Class<? extends BeanAttributeReader> reader() default BeanAttributeReader.Default.class;
+    Class<? extends BeanAttributeReader> reader() default VoidBeanAttributeMapper.class;
 
-    Class<? extends BeanAttributeWriter> writer() default BeanAttributeWriter.Default.class;
+    Class<? extends BeanAttributeWriter> writer() default VoidBeanAttributeMapper.class;
 }

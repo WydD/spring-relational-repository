@@ -7,10 +7,10 @@ import java.lang.reflect.Method;
  *
  */
 public class FieldMappingData {
-    public String columnName;
-    public Field field;
-    public Method writeMethod;
-    public Method readMethod;
+    public final String columnName;
+    public final Field field;
+    public final Method writeMethod;
+    public final Method readMethod;
     public BeanAttributeWriter attributeWriter;
     public BeanAttributeReader attributeReader;
 

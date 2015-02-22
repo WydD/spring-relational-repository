@@ -11,7 +11,6 @@ import java.util.stream.Stream;
 
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
-import fr.petitl.relational.repository.template.bean.MappingFactory;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.query.Parameters;
 import org.springframework.data.repository.query.QueryMethod;
@@ -59,7 +58,7 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
 
         Class<?> rowType = this.getReturnedObjectType();
 
-        RowMapper<?> mapper = MappingFactory.beanMapping(rowType).getMapper();
+        RowMapper<?> mapper = template.getMappingData(rowType).getMapper();
         if (this.isPageQuery() || this.isSliceQuery()) {
             // Paged queries
             throw new IllegalStateException("Unsupported page queries");

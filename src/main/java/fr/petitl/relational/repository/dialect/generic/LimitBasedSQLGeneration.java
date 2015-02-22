@@ -1,4 +1,4 @@
-package fr.petitl.relational.repository.repository.sql;
+package fr.petitl.relational.repository.dialect.generic;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import fr.petitl.relational.repository.repository.SQLGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.FieldMappingData;
@@ -19,7 +20,7 @@ import static java.lang.String.format;
  * Inspired by the SqlGenerator pattern of nurkiewicz
  * https://github.com/nurkiewicz/spring-data-jdbc-repository/blob/master/src/main/java/com/nurkiewicz/jdbcrepository/sql/SqlGenerator.java
  */
-public class BeanSQLGeneration<T, ID extends Serializable> {
+public class LimitBasedSQLGeneration<T, ID extends Serializable> implements SQLGeneration {
     protected final String update;
     protected final String insertInto;
     protected final String tableName;
@@ -43,7 +44,7 @@ public class BeanSQLGeneration<T, ID extends Serializable> {
 
     protected final RelationalEntityInformation<T, ID> entityInformation;
 
-    public BeanSQLGeneration(RelationalEntityInformation<T, ID> entityInformation) {
+    public LimitBasedSQLGeneration(RelationalEntityInformation<T, ID> entityInformation) {
         this.entityInformation = entityInformation;
 
         mappingData = entityInformation.getMappingData();
@@ -67,38 +68,47 @@ public class BeanSQLGeneration<T, ID extends Serializable> {
         update = format("UPDATE %s SET %s %s", tableName, updateSet, whereId);
     }
 
+    @Override
     public String countStar() {
         return SELECT_COUNT + fromTable;
     }
 
+    @Override
     public String deleteById() {
         return DELETE + fromTable + whereId;
     }
 
+    @Override
     public String delete() {
         return DELETE + fromTable;
     }
 
+    @Override
     public String exists() {
         return SELECT_COUNT + fromTable + whereId;
     }
 
+    @Override
     public String selectById() {
         return SELECT_STAR + fromTable + whereId;
     }
 
+    @Override
     public String selectAll() {
         return SELECT_STAR + fromTable;
     }
 
+    @Override
     public String selectIds() {
         return SELECT + idColumns + fromTable;
     }
 
+    @Override
     public String insertInto() {
         return insertInto;
     }
 
+    @Override
     public String update() {
         return update;
     }
@@ -118,12 +128,13 @@ public class BeanSQLGeneration<T, ID extends Serializable> {
         return idColumns + " IN (" + questionMarks(count) + ")";
     }
 
-    public String selectAll(int count) {
+    @Override
+    public String selectAll(int idCount) {
         String sql = SELECT_STAR + fromTable + WHERE;
         if (compositeKey) {
-            return sql + simpleIdIn(count);
+            return sql + simpleIdIn(idCount);
         } else {
-            return sql + compositeIdIn(count);
+            return sql + compositeIdIn(idCount);
         }
     }
 
@@ -145,10 +156,12 @@ public class BeanSQLGeneration<T, ID extends Serializable> {
         return builder.toString();
     }
 
+    @Override
     public String selectAll(Pageable page) {
         return selectAll(page.getSort()) + limitClause(page);
     }
 
+    @Override
     public String selectAll(Sort sort) {
         return selectAll() + sortClause(sort);
     }

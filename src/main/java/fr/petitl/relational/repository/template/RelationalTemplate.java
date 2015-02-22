@@ -8,6 +8,9 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import fr.petitl.relational.repository.dialect.BeanDialect;
+import fr.petitl.relational.repository.template.bean.BeanMappingData;
+import fr.petitl.relational.repository.template.bean.MappingFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.datasource.DataSourceUtils;
@@ -21,12 +24,25 @@ import org.springframework.util.Assert;
  */
 public class RelationalTemplate extends JdbcAccessor {
 
+    private final BeanDialect dialect;
+    private final MappingFactory mappingFactory;
     private NativeJdbcExtractor nativeJdbcExtractor;
 
-    public RelationalTemplate(DataSource ds) {
+    public RelationalTemplate(DataSource ds, BeanDialect dialect) {
+        this.dialect = dialect;
+        mappingFactory = new MappingFactory(dialect);
         this.setDataSource(ds);
         afterPropertiesSet();
     }
+
+    public BeanDialect getDialect() {
+        return dialect;
+    }
+
+    public <T> BeanMappingData<T> getMappingData(Class<T> clazz) {
+        return mappingFactory.beanMapping(clazz);
+    }
+
 
     public NativeJdbcExtractor getNativeJdbcExtractor() {
         return nativeJdbcExtractor;

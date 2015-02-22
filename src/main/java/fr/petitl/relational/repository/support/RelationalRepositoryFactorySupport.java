@@ -6,7 +6,6 @@ import fr.petitl.relational.repository.query.Query;
 import fr.petitl.relational.repository.query.RelationalRepositoryQueryMethod;
 import fr.petitl.relational.repository.repository.SimpleRelationalRepository;
 import fr.petitl.relational.repository.template.RelationalTemplate;
-import fr.petitl.relational.repository.template.bean.MappingFactory;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 import org.springframework.data.repository.query.EvaluationContextProvider;
@@ -25,7 +24,7 @@ public class RelationalRepositoryFactorySupport extends RepositoryFactorySupport
 
     @Override
     public <T, ID extends Serializable> RelationalEntityInformation<T, ID> getEntityInformation(Class<T> c) {
-        return new RelationalEntityInformation<>(MappingFactory.beanMapping(c));
+        return new RelationalEntityInformation<>(operations.getMappingData(c));
     }
 
     @Override

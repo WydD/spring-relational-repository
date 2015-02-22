@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import fr.petitl.relational.repository.repository.sql.BeanSQLGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.RelationalQuery;
 import fr.petitl.relational.repository.template.RelationalTemplate;
@@ -26,7 +25,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     private final Function<T, ID> idGetter;
     private final RelationalEntityInformation<T, ID> entityInformation;
-    private final BeanSQLGeneration<T, ID> sql;
+    private final SQLGeneration sql;
     private final BeanMappingData<T> mappingData;
 
     private final boolean generatedPK;
@@ -35,7 +34,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     public SimpleRelationalRepository(RelationalEntityInformation<T, ID> entityInformation, RelationalTemplate template) {
         this.template = template;
-        sql = new BeanSQLGeneration<>(entityInformation);
+        sql = template.getDialect().sql(entityInformation);
 
         mappingData = entityInformation.getMappingData();
 

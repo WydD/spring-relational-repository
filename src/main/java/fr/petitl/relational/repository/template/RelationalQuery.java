@@ -8,8 +8,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.springframework.jdbc.core.StatementCreatorUtils.javaTypeToSqlParameterType;
-import static org.springframework.jdbc.core.StatementCreatorUtils.setParameterValue;
+import fr.petitl.relational.repository.template.bean.BeanAttributeWriter;
 
 /**
  *
@@ -20,9 +19,8 @@ public class RelationalQuery<E> {
     private RowMapper<E> mapper;
     private boolean preparing = true;
 
-    private Function<Object, ColumnMapper> defaultSetter = (obj) -> (ps, i) -> {
-        setParameterValue(ps, i, javaTypeToSqlParameterType(obj.getClass()), obj);
-    };
+
+    private Function<Object, ColumnMapper> defaultSetter;
 
     public static interface PrepareStep {
         public void prepareStatement(PreparedStatement ps) throws SQLException;
@@ -33,6 +31,8 @@ public class RelationalQuery<E> {
     public RelationalQuery(String sql, RelationalTemplate template, RowMapper<E> mapper) {
         this.sql = template.translateExceptions("ParseQuery", sql, () -> SqlQuery.parse(sql));
         this.template = template;
+        BeanAttributeWriter defaultWriter = template.getDialect().defaultWriter();
+        defaultSetter = obj -> (ps, i) -> defaultWriter.writeAttribute(ps, i, obj, null);
         this.mapper = mapper;
     }
 
