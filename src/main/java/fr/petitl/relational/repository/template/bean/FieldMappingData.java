@@ -11,8 +11,8 @@ public class FieldMappingData {
     public final Field field;
     public final Method writeMethod;
     public final Method readMethod;
-    public BeanAttributeWriter attributeWriter;
-    public BeanAttributeReader attributeReader;
+    public final BeanAttributeWriter attributeWriter;
+    public final BeanAttributeReader attributeReader;
 
     public FieldMappingData(String columnName, Field field, Method writeMethod, Method readMethod,
                             BeanAttributeWriter attributeWriter, BeanAttributeReader attributeReader) {
