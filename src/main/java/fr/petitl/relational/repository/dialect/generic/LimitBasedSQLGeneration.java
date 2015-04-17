@@ -34,7 +34,7 @@ public class LimitBasedSQLGeneration<T, ID extends Serializable> implements SQLG
     public static final String SELECT = "SELECT ";
     public static final String FROM = " FROM ";
     public static final String WHERE = " WHERE ";
-    public static final String DELETE = "DELETE ";
+    public static final String DELETE = "DELETE";
     public static final String SELECT_COUNT = SELECT + "count(*)";
     public static final String SELECT_STAR = SELECT + "*";
 
@@ -132,9 +132,9 @@ public class LimitBasedSQLGeneration<T, ID extends Serializable> implements SQLG
     public String selectAll(int idCount) {
         String sql = SELECT_STAR + fromTable + WHERE;
         if (compositeKey) {
-            return sql + simpleIdIn(idCount);
-        } else {
             return sql + compositeIdIn(idCount);
+        } else {
+            return sql + simpleIdIn(idCount);
         }
     }
 

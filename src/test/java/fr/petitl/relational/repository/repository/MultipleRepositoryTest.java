@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import fr.petitl.relational.repository.repository.model.MainGenerated;
+import fr.petitl.relational.repository.repository.model.Multiple;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,9 +21,9 @@ import org.springframework.data.domain.Sort;
 
 import static org.junit.Assert.*;
 
-public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
+public class MultipleRepositoryTest extends AbstractRepositoryTest {
 
-    private SimpleRelationalRepository<MainGenerated, Integer> repository;
+    private SimpleRelationalRepository<Multiple, Object[]> repository;
 
     @Before
     public void init() {
@@ -37,35 +37,35 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testDelete() throws Exception {
-        repository.delete(new MainGenerated(2, null, null)); // other attributes are irrelevant
-        repository.delete(new MainGenerated(5, null, null)); // other attributes are irrelevant
-        verifyDeleted(repository, 2, 2);
+        repository.delete(new Multiple(2, "canard", null, null)); // other attributes are irrelevant
+        repository.delete(new Multiple(5, "coin", null, null)); // other attributes are irrelevant
+        verifyDeleted(repository, 2, new Object[]{2, "canard"});
     }
 
     @Test
     public void testDelete1() throws Exception {
-        repository.delete(2);
-        repository.delete(4);
-        verifyDeleted(repository, 2, 2);
+        repository.delete(new Object[]{2, "canard"});
+        repository.delete(new Object[]{4, "canard"});
+        verifyDeleted(repository, 2, new Object[]{2, "canard"});
     }
 
     @Test
     public void testDelete2() throws Exception {
-        repository.delete(Arrays.asList(new MainGenerated(2, null, null), new MainGenerated(3, null, null)));
-        repository.delete(Arrays.asList(new MainGenerated(4, null, null)));
-        verifyDeleted(repository, 1, 2, 3);
+        repository.delete(Arrays.asList(new Multiple(2, "canard", null, null), new Multiple(3, "youpi", null, null)));
+        repository.delete(Collections.singletonList(new Multiple(4, "canard", null, null)));
+        verifyDeleted(repository, 1, new Object[]{2, "canard"}, new Object[]{3, "youpi"});
     }
 
     @Test
     public void testDeleteAll() throws Exception {
         repository.deleteAll();
-        verifyDeleted(repository, 0, 1, 2, 3);
+        verifyDeleted(repository, 0, new Object[]{1, "canard"}, new Object[]{2, "canard"}, new Object[]{3, "youpi"});
     }
 
     @Test
     public void testExists() throws Exception {
-        assertTrue(repository.exists(2));
-        assertFalse(repository.exists(4));
+        assertTrue(repository.exists(new Object[]{2, "canard"}));
+        assertFalse(repository.exists(new Object[]{4, "canard"}));
     }
 
     @Test
@@ -76,24 +76,24 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testFindAll1() throws Exception {
-        List<MainGenerated> all = repository.findAll(new Sort(Arrays.asList(
+        List<Multiple> all = repository.findAll(new Sort(Arrays.asList(
                 new Sort.Order(Sort.Direction.DESC, "name"),
                 new Sort.Order(Sort.Direction.ASC, "created_date")
         )));
         verifyFindAll(all, 1, 2, 3);
-        assertEquals(Arrays.asList(2, 3, 1), all.stream().map(MainGenerated::getId).collect(Collectors.toList()));
+        assertEquals(Arrays.asList(2, 3, 1), all.stream().map(Multiple::getId).collect(Collectors.toList()));
     }
 
     @Test
     public void testFindAll2() throws Exception {
-        List<MainGenerated> all = repository.findAll(Arrays.asList(1, 3));
+        List<Multiple> all = repository.findAll(Arrays.asList(new Object[]{1, "canard"}, new Object[]{3, "youpi"}));
         verifyFindAll(all, 1, 3);
     }
 
     @Test
     public void testFindAll3() throws Exception {
-        Page<MainGenerated> first = repository.findAll(new PageRequest(0, 2));
-        Page<MainGenerated> last = repository.findAll(new PageRequest(1, 2));
+        Page<Multiple> first = repository.findAll(new PageRequest(0, 2));
+        Page<Multiple> last = repository.findAll(new PageRequest(1, 2));
         assertEquals(2, first.getTotalPages());
         assertEquals(3, first.getTotalElements());
         assertEquals(2, first.getContent().size());
@@ -101,34 +101,36 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
         assertEquals(3, last.getTotalElements());
         assertEquals(1, last.getContent().size());
 
-        HashSet<MainGenerated> set = new HashSet<>();
+        HashSet<Multiple> set = new HashSet<>();
         first.getContent().stream().forEach(set::add);
         last.getContent().stream().forEach(set::add);
 
         verifyFindAll(set, 1, 2, 3);
 
-        Page<MainGenerated> firstPage = repository.findAll(new PageRequest(0, 2, new Sort(Collections.singletonList(
+        Page<Multiple> firstPage = repository.findAll(new PageRequest(0, 2, new Sort(Collections.singletonList(
                 new Sort.Order(Sort.Direction.DESC, "created_date")
         ))));
         verifyFindAll(firstPage.getContent(), 2, 1);
-        assertEquals(Arrays.asList(2, 1), firstPage.getContent().stream().map(MainGenerated::getId).collect(Collectors.toList()));
+        assertEquals(Arrays.asList(2, 1), firstPage.getContent().stream().map(Multiple::getId).collect(Collectors.toList()));
     }
 
     @Test
     public void testFindOne() throws Exception {
-        verifyPojo2(repository.findOne(2));
+        verifyPojo2(repository.findOne(new Object[]{2, "canard"}));
+        assertNull(repository.findOne(new Object[]{2, "youpi"}));
     }
 
     @Test
     public void testSave() throws Exception {
-        MainGenerated before = new MainGenerated(null, "Youpi", new Date());
+        Multiple before = new Multiple(null, "yeah", "Wooh", new Date());
 
         Date createdDate = before.getCreatedDate();
         String name = before.getName();
 
-        MainGenerated after = repository.save(before);
+        Multiple after = repository.save(before);
         assertEquals(createdDate, after.getCreatedDate());
         assertEquals(name, after.getName());
+        assertEquals("yeah", after.getType());
         assertEquals(4, after.getId().intValue());
 
         verifyEqualsInDB(after);
@@ -144,15 +146,17 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
     @Test
     public void testSave1() throws Exception {
         Date createdDate = new Date();
-        MainGenerated beforeFirst = new MainGenerated(null, "First", createdDate);
-        MainGenerated beforeSecond = new MainGenerated(null, "Second", createdDate);
-        List<MainGenerated> all = Lists.newArrayList(repository.save(Arrays.asList(beforeFirst, beforeSecond)));
+        Multiple beforeFirst = new Multiple(null, "woot", "First", createdDate);
+        Multiple beforeSecond = new Multiple(null, "w00t", "Second", createdDate);
+        List<Multiple> all = Lists.newArrayList(repository.save(Arrays.asList(beforeFirst, beforeSecond)));
 
         assertEquals(createdDate, all.get(0).getCreatedDate());
+        assertEquals("woot", all.get(0).getType());
         assertEquals("First", all.get(0).getName());
         assertEquals(4, all.get(0).getId().intValue());
 
         assertEquals(createdDate, all.get(1).getCreatedDate());
+        assertEquals("w00t", all.get(1).getType());
         assertEquals("Second", all.get(1).getName());
         assertEquals(5, all.get(1).getId().intValue());
 
@@ -160,20 +164,21 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
         verifyEqualsInDB(beforeSecond);
     }
 
-    protected void verifyEqualsInDB(MainGenerated beforeFirst) throws SQLException {
+    protected void verifyEqualsInDB(Multiple beforeFirst) throws SQLException {
         repository.getTemplate().execute((PreparedStatement statement) -> {
             ResultSet rs = statement.executeQuery();
             assertTrue(rs.next());
             assertEquals(beforeFirst.getId().intValue(), rs.getInt(1));
-            assertEquals(beforeFirst.getName(), rs.getString(2));
-            assertEquals(beforeFirst.getCreatedDate(), rs.getTimestamp(3));
+            assertEquals(beforeFirst.getType(), rs.getString(2));
+            assertEquals(beforeFirst.getName(), rs.getString(3));
+            assertEquals(beforeFirst.getCreatedDate(), rs.getTimestamp(4));
             return 1;
-        }, con -> con.prepareStatement("SELECT id, name, created_date FROM MainGenerated WHERE id = " + beforeFirst.getId()));
+        }, con -> con.prepareStatement("SELECT id, type, name, created_date FROM Multiple WHERE id = " + beforeFirst.getId() + " AND type = '" + beforeFirst.getType() + "'"));
     }
 
     @Test
     public void testUpdate() throws Exception {
-        MainGenerated before = new MainGenerated(3, "Youpi", new Date());
+        Multiple before = new Multiple(3, "youpi", "Youpi", new Date());
 
         try {
             repository.save(before);
@@ -186,7 +191,7 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
         verifyEqualsInDB(before);
 
         try {
-            repository.update(new MainGenerated(4, "Youpi", new Date()));
+            repository.update(new Multiple(4, "youpi again", "Youpi", new Date()));
             assert false;
         } catch (IncorrectResultSizeDataAccessException ignored) {
         }
@@ -194,15 +199,15 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testUpdate1() throws Exception {
-        MainGenerated pojo2 = new MainGenerated(2, "Youpi", new Date());
-        MainGenerated pojo3 = new MainGenerated(3, "Yeah", new Date());
+        Multiple pojo2 = new Multiple(2, "canard", "Youpi", new Date());
+        Multiple pojo3 = new Multiple(3, "youpi", "Yeah", new Date());
         repository.update(Arrays.asList(pojo2, pojo3).stream());
 
         verifyEqualsInDB(pojo2);
         verifyEqualsInDB(pojo3);
 
         try {
-            repository.update(Arrays.asList(pojo2, new MainGenerated(4, "Yeah", new Date())).stream());
+            repository.update(Arrays.asList(pojo2, new Multiple(4, "youpi again", "Yeah", new Date())).stream());
             assert false;
         } catch (IncorrectResultSizeDataAccessException ignored) {
         }
@@ -211,7 +216,7 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
     @Test
     public void testStreamAll() throws Exception {
         assertEquals(Integer.valueOf(1), repository.fetchAll(out -> {
-            Map<Integer, MainGenerated> result = out.collect(Collectors.toMap(MainGenerated::getId, it -> it));
+            Map<Integer, Multiple> result = out.collect(Collectors.toMap(Multiple::getId, it -> it));
             verifyPojo1(result.get(1));
             verifyPojo2(result.get(2));
             verifyPojo3(result.get(3));
@@ -222,12 +227,12 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
     @Test
     public void testStreamAllIds() throws Exception {
         assertTrue(repository.fetchAllIds(out -> {
-            assertEquals(Sets.newHashSet(1, 2, 3), out.collect(Collectors.toSet()));
+            assertEquals(Sets.newHashSet(1, 2, 3), out.map(it -> it[0]).collect(Collectors.toSet()));
             return true;
         }));
     }
 
-    protected void verifyFindAll(Collection<MainGenerated> all, Integer... ids) {
+    protected void verifyFindAll(Collection<Multiple> all, Integer... ids) {
         HashSet<Integer> idSet = Sets.newHashSet(ids);
         if (idSet.contains(1)) {
             verifyPojo1(all.stream().filter(it -> it.getId() == 1).findFirst().get());
@@ -242,36 +247,39 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
         }
     }
 
-    private void verifyPojo3(MainGenerated pojo3) {
+    private void verifyPojo3(Multiple pojo3) {
         assertEquals(3, pojo3.getId().intValue());
+        assertEquals("youpi", pojo3.getType());
         assertEquals("Hey", pojo3.getName());
         assertEquals(dateFrom("2014-02-14T20:02:32"), pojo3.getCreatedDate());
     }
 
-    private void verifyPojo2(MainGenerated pojo2) {
+    private void verifyPojo2(Multiple pojo2) {
         assertEquals(2, pojo2.getId().intValue());
+        assertEquals("canard", pojo2.getType());
         assertEquals("Ho", pojo2.getName());
         assertEquals(dateFrom("2014-05-19T20:02:32"), pojo2.getCreatedDate());
     }
 
-    private void verifyPojo1(MainGenerated pojo1) {
+    private void verifyPojo1(Multiple pojo1) {
         assertEquals(1, pojo1.getId().intValue());
+        assertEquals("canard", pojo1.getType());
         assertEquals("Hey", pojo1.getName());
         assertEquals(dateFrom("2014-05-14T20:02:32"), pojo1.getCreatedDate());
     }
 
-    protected SimpleRelationalRepository<MainGenerated, Integer> simpleBuild() {
-        return getRepository(MainGenerated.class, MainGenerated.CREATE, MainGenerated.INSERT);
+    protected SimpleRelationalRepository<Multiple, Object[]> simpleBuild() {
+        return getRepository(Multiple.class, Multiple.CREATE, Multiple.INSERT);
     }
 
-    protected void verifyDeleted(SimpleRelationalRepository<MainGenerated, Integer> repository, int count, Integer... missingIds) throws SQLException {
+    protected void verifyDeleted(SimpleRelationalRepository<Multiple, Object[]> repository, int count, Object[]... missingIds) throws SQLException {
         RelationalTemplate template = repository.getTemplate();
-        for (Integer id : missingIds) {
+        for (Object[] id : missingIds) {
             template.execute((PreparedStatement statement) -> {
                 ResultSet rs = statement.executeQuery();
                 assertFalse(rs.next());
                 return 1;
-            }, con -> con.prepareStatement("SELECT * FROM MainGenerated WHERE id = "+id));
+            }, con -> con.prepareStatement("SELECT * FROM Multiple WHERE id = " + id[0] + " AND type='" + id[1] + "'"));
         }
 
         template.execute((PreparedStatement statement) -> {
@@ -279,6 +287,6 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
             assertTrue(rs.next());
             assertEquals(count, rs.getInt(1));
             return 1;
-        }, con -> con.prepareStatement("SELECT count(*) FROM MainGenerated"));
+        }, con -> con.prepareStatement("SELECT count(*) FROM Multiple"));
     }
 }

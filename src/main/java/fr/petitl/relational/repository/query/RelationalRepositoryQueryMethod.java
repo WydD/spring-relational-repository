@@ -52,13 +52,14 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
         return ClassTypeInformation.fromReturnTypeOf(method);
     }
 
+    @SuppressWarnings("unchecked")
     public RepositoryQuery createAnnotationBased() {
         Query annotation = getAnnotation();
         String sql = annotation.value();
 
-        Class<?> rowType = this.getReturnedObjectType();
+        Class rowType = this.getReturnedObjectType();
 
-        RowMapper<?> mapper = template.getMappingData(rowType).getMapper();
+        RowMapper mapper = template.<Object>getMappingData(rowType).getMapper();
         if (this.isPageQuery() || this.isSliceQuery()) {
             // Paged queries
             throw new IllegalStateException("Unsupported page queries");
