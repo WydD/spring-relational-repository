@@ -36,7 +36,7 @@ implementation and lambdas awesomeness which makes the data management way easie
 ## How to use it
 
 ### Configuration
-SPR uses programmatic configuration of spring.
+Spring Relation Repository uses the straight forward programmatic configuration of spring.
 ```java
 @Configuration
 @EnableRelationalRepositories(basePackages = "foo.bar.repositories")
@@ -142,6 +142,8 @@ You can use this kind of syntax in your generated repository function using the 
 <E> E findByNameStream(String name, @CollectorFunction(Pojo.class) Function<Stream<Pojo>, E> apply);
 ```
 
+TODO: GroupBy helper in queries
+
 ### Object Mappings
 By default, association between fields and column is done via their names. *It is assumed that Java beans uses
  the camel case convention and Database tables uses the snake case convention*. 
@@ -151,16 +153,16 @@ The default type mapping is completely done using Spring JDBC Utils: StatementCr
 
 Repositories are able to map objects to their tables. But queries can map their row to data transfer objects like:
 ```java
-    @Query("SELECT name, count(*) as `count` FROM Pojo GROUP BY name")
-    List<PojoCount> countByName();
+@Query("SELECT name, count(*) as `count` FROM Pojo GROUP BY name")
+List<PojoCount> countByName();
 ```
 
 ```PojoCount``` being a class with two fields, String name and int count. ```@Column``` annotations are used for its mapping.
  
 Note that it can be more interesting to have something that resembles this: 
 ```java
-    @Query("SELECT name, count(*) as `count` FROM Pojo GROUP BY name")
-    <E> E countByName(@CollectorFunction(PojoCount.class) Function<Stream<PojoCount>, E> apply);
+@Query("SELECT name, count(*) as `count` FROM Pojo GROUP BY name")
+<E> E countByName(@CollectorFunction(PojoCount.class) Function<Stream<PojoCount>, E> apply);
 ```
 
 Therefore, you can call this method to directly create a Map using something like this:
@@ -213,6 +215,6 @@ public class JsonBMapper implements BeanAttributeReader, BeanAttributeWriter {
 
 Now you can use your mapper in your domain objects or in your data transfer objects.
 ```java
-    @Column(reader = JsonBMapper.class, writer = JsonBMapper.class)
-    Map<String, Integer> keywords;
+@Column(reader = JsonBMapper.class, writer = JsonBMapper.class)
+Map<String, Integer> keywords;
 ```
