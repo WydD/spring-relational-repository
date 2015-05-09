@@ -3,7 +3,7 @@ package fr.petitl.relational.repository.support;
 import java.io.Serializable;
 
 import fr.petitl.relational.repository.query.Query;
-import fr.petitl.relational.repository.query.RelationalRepositoryQueryMethod;
+import fr.petitl.relational.repository.query.method.RelationalRepositoryQueryMethod;
 import fr.petitl.relational.repository.repository.SimpleRelationalRepository;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import org.springframework.data.repository.core.RepositoryMetadata;
@@ -44,7 +44,7 @@ public class RelationalRepositoryFactorySupport extends RepositoryFactorySupport
 
             Query annotation = queryMethod.getAnnotation();
             if (annotation == null) {
-                throw new IllegalStateException("Methods without @Query are not supported yet.");
+                throw new IllegalStateException("Methods without @Query are not supported yet and maybe never... because it is bad");
 //                PartTree p = new PartTree(method.getName(), metadata.getDomainType());
 //                for (PartTree.OrPart orPart : p) {
 //                    orPart.toString();

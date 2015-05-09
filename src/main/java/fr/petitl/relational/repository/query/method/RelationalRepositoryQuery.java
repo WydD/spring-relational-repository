@@ -1,4 +1,4 @@
-package fr.petitl.relational.repository.query;
+package fr.petitl.relational.repository.query.method;
 
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -17,20 +17,20 @@ import org.springframework.data.repository.query.RepositoryQuery;
  */
 public class RelationalRepositoryQuery<S> implements RepositoryQuery {
     private final QueryMethod method;
-    private Function<Stream<S>, S> fetchMethod;
+    private Function<Object[], Function<Stream<S>, S>> fetchMethod;
     private Parameters<?, ?> parametersConfig;
     private final RelationalQuery<S> relationalQuery;
 
     public RelationalRepositoryQuery(String sql, RelationalTemplate template,
                                      RowMapper<S> mapper, QueryMethod method,
-                                     Function<Stream<S>, S> fetchMethod,
+                                     Function<Object[], Function<Stream<S>, S>> fetchMethod,
                                      Parameters<?, ?> parametersConfiguration) {
         this.method = method;
         this.fetchMethod = fetchMethod;
         this.parametersConfig = parametersConfiguration;
         relationalQuery = new RelationalQuery<>(sql, template, mapper);
         // Quick check
-        if (relationalQuery.getSql().getNumberOfArguments() != parametersConfig.getNumberOfParameters()) {
+        if (relationalQuery.getSql().getNumberOfArguments() != parametersConfig.getBindableParameters().getNumberOfParameters()) {
             throw new IllegalMappingException("Number of argument does not match between the given queries and the method signature: " + method.toString());
         }
         // Try to resolve everything
@@ -49,21 +49,15 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
 
     @Override
     public Object execute(Object[] parameters) {
-        if (this.parametersConfig != null) {
-            for (Parameter parameter : parametersConfig.getBindableParameters()) {
-                Object value = parameters[parameter.getIndex()];
-                if (parameter.isNamedParameter()) {
-                    relationalQuery.setParameter(parameter.getName(), value);
-                } else {
-                    relationalQuery.setParameter(parameter.getIndex(), value);
-                }
-            }
-        } else {
-            for (int i = 0; i < parameters.length; i++) {
-                relationalQuery.setParameter(i, parameters[i]);
+        for (Parameter parameter : parametersConfig.getBindableParameters()) {
+            Object value = parameters[parameter.getIndex()];
+            if (parameter.isNamedParameter()) {
+                relationalQuery.setParameter(parameter.getName(), value);
+            } else {
+                relationalQuery.setParameter(parameter.getIndex(), value);
             }
         }
-        return relationalQuery.fetch(fetchMethod);
+        return relationalQuery.fetch(fetchMethod.apply(parameters));
     }
 
     @Override

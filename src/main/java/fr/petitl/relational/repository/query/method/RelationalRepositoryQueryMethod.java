@@ -1,4 +1,4 @@
-package fr.petitl.relational.repository.query;
+package fr.petitl.relational.repository.query.method;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -9,6 +9,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import fr.petitl.relational.repository.query.Query;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import org.springframework.data.repository.core.RepositoryMetadata;
@@ -29,6 +30,7 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
 
     private final Method method;
     private RelationalTemplate template;
+    private Class mappingType;
 
     /**
      * Creates a new {@link org.springframework.data.repository.query.QueryMethod} from the given parameters. Looks up the correct query to use for following
@@ -42,6 +44,8 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
 
         this.method = method;
         this.template = template;
+        // TODO: dirty hack for now...
+        mappingType = this.getReturnedObjectType().equals(Object.class) ? this.getDomainClass() : this.getReturnedObjectType();
     }
 
     public Query getAnnotation() {
@@ -57,25 +61,39 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
         Query annotation = getAnnotation();
         String sql = annotation.value();
 
-        Class rowType = this.getReturnedObjectType();
-
-        RowMapper mapper = template.<Object>getMappingData(rowType).getMapper();
+        RowMapper mapper = template.<Object>getMappingData(mappingType).getMapper();
         if (this.isPageQuery() || this.isSliceQuery()) {
             // Paged queries
             throw new IllegalStateException("Unsupported page queries");
         } else {
-            Function<Stream<Object>, Object> fetchMethod = computeFetchMethod();
             Parameters<?, ?> parameters = this.getParameters();
-            //noinspection unchecked
-            return new RelationalRepositoryQuery(sql, template, mapper, this, fetchMethod, parameters);
+            return new RelationalRepositoryQuery(sql, template, mapper, this, computeFetchMethod(), parameters);
         }
     }
 
-    protected Function<Stream<Object>, Object> computeFetchMethod() {
-        if (this.isQueryForEntity()) {
-            return it -> it.findFirst().orElse(null);
+    @Override
+    protected Parameters<?, ?> createParameters(Method method) {
+        return new StreamParameters(method);
+    }
+
+    protected Function<Object[], Function<Stream<Object>, Object>> computeFetchMethod() {
+        if (mappingType.isAssignableFrom(this.getReturnType().getType())) {
+            return obj -> it -> it.findFirst().orElse(null);
         }
 
+        StreamParameters parameters = (StreamParameters) getParameters();
+        Parameter functionParameter = parameters.getFunctionParameter();
+        if (functionParameter != null) {
+            //noinspection unchecked
+            return obj -> (Function<Stream<Object>, Object>) obj[functionParameter.getIndex()];
+        }
+        Function<Stream<Object>, Object> collector = computeCollectionFetchMethod();
+        if (collector != null)
+            return obj -> collector;
+        throw new IllegalStateException("Unsupported fetch method");
+    }
+
+    private Function<Stream<Object>, Object> computeCollectionFetchMethod() {
         Class<?> returnType = method.getReturnType();
         if (this.isCollectionQuery()) {
             Collector<Object, ?, ?> collector;
@@ -90,10 +108,10 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
             }
             return it -> it.collect(collector);
         } else if (returnType.isAssignableFrom(Stream.class)) {
-            return it -> it;
+            throw new IllegalStateException("Cannot return a stream as this must be done in a transaction (consider passing a Function<Stream<A>, B> as argument).");
         } else if (returnType.isAssignableFrom(Optional.class)) {
             return Stream::findFirst;
         }
-        throw new IllegalStateException("Unsupported fetch method");
+        return null;
     }
 }

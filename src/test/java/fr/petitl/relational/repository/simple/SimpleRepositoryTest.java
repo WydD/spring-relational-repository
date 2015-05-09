@@ -2,6 +2,8 @@ package fr.petitl.relational.repository.simple;
 
 import javax.sql.DataSource;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import fr.petitl.relational.repository.EnableRelationalRepositories;
 import fr.petitl.relational.repository.SpringTest;
@@ -74,6 +76,22 @@ public class SimpleRepositoryTest extends SpringTest {
         Assert.assertEquals("hey", hey.getId());
         Pojo hey2 = repository.testGetPositional("oh no!");
         Assert.assertNull(hey2);
+    }
+
+    @Test
+    public void testGeneratedPositionalCollectionMethod() {
+        List<Pojo> hey = repository.testGetPositionalList("ho");
+        Assert.assertEquals("hey", hey.get(0).getId());
+        Assert.assertEquals(1, hey.size());
+        List<Pojo> hey2 = repository.testGetPositionalList("oh no!");
+        Assert.assertEquals(0, hey2.size());
+    }
+
+    @Test
+    public void testApplyMethod() {
+        List<Pojo> pojos = repository.testApplyStream("ho", it -> it.collect(Collectors.toList()));
+        Assert.assertEquals(1, pojos.size());
+        Assert.assertEquals("hey", pojos.get(0).getId());
     }
 
     @Test
