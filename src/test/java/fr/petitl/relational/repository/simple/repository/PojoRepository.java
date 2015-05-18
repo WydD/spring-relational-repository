@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import fr.petitl.relational.repository.query.CollectorFunction;
 import fr.petitl.relational.repository.query.Query;
 import fr.petitl.relational.repository.repository.RelationalRepository;
 import fr.petitl.relational.repository.simple.Pojo;
@@ -23,5 +24,5 @@ public interface PojoRepository extends RelationalRepository<Pojo, String>, Pojo
     List<Pojo> testGetPositionalList(String name);
 
     @Query("SELECT * FROM Pojo WHERE name = ?0")
-    <E> E testApplyStream(String name, Function<Stream<Pojo>, E> apply);
+    <E> E testApplyStream(String name, @CollectorFunction(Pojo.class) Function<Stream<Pojo>, E> apply);
 }
