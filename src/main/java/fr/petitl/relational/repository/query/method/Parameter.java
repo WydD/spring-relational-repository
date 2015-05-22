@@ -2,6 +2,7 @@ package fr.petitl.relational.repository.query.method;
 
 import java.util.function.Function;
 
+import fr.petitl.relational.repository.query.CollectorFunction;
 import org.springframework.core.MethodParameter;
 
 /**
@@ -9,7 +10,8 @@ import org.springframework.core.MethodParameter;
  */
 public class Parameter extends org.springframework.data.repository.query.Parameter {
 
-    private final boolean isFunc;
+    private final boolean isCollectorFunction;
+    private final Class<?> forcedDomainType;
 
     /**
      * Creates a new {@link Parameter} for the given {@link MethodParameter}.
@@ -19,15 +21,27 @@ public class Parameter extends org.springframework.data.repository.query.Paramet
     protected Parameter(MethodParameter parameter) {
         super(parameter);
 
-        isFunc = Function.class.isAssignableFrom(parameter.getParameterType());
+        isCollectorFunction = parameter.hasParameterAnnotation(CollectorFunction.class);
+        if (isCollectorFunction) {
+            if (!Function.class.isAssignableFrom(parameter.getParameterType())) {
+                throw new IllegalArgumentException("CollectorFunction parameter is not a function");
+            }
+            forcedDomainType = parameter.getParameterAnnotation(CollectorFunction.class).value();
+        } else {
+            forcedDomainType = null;
+        }
     }
 
-    public boolean isFunction() {
-        return isFunc;
+    public Class<?> getForcedDomainType() {
+        return forcedDomainType;
+    }
+
+    public boolean isCollectorFunction() {
+        return isCollectorFunction;
     }
 
     @Override
     public boolean isSpecialParameter() {
-        return isFunc || super.isSpecialParameter();
+        return isCollectorFunction || super.isSpecialParameter();
     }
 }

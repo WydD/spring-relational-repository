@@ -11,15 +11,15 @@ import org.springframework.data.repository.query.Parameters;
  */
 public class StreamParameters extends Parameters<StreamParameters, Parameter> {
 
-    private Parameter functionParameter;
+    private Parameter collectorParameter;
 
     public StreamParameters(Method method) {
         super(method);
         Class<?>[] types = method.getParameterTypes();
         for (int i = 0; i < types.length; i++) {
             Parameter parameter = getParameter(i);
-            if (parameter.isFunction()) {
-                functionParameter = parameter;
+            if (parameter.isCollectorFunction()) {
+                collectorParameter = parameter;
             }
         }
     }
@@ -28,8 +28,8 @@ public class StreamParameters extends Parameters<StreamParameters, Parameter> {
         super(originals);
     }
 
-    public Parameter getFunctionParameter() {
-        return functionParameter;
+    public Parameter getCollectorParameter() {
+        return collectorParameter;
     }
 
     /*

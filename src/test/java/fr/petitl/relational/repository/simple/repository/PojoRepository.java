@@ -8,6 +8,7 @@ import fr.petitl.relational.repository.query.CollectorFunction;
 import fr.petitl.relational.repository.query.Query;
 import fr.petitl.relational.repository.repository.RelationalRepository;
 import fr.petitl.relational.repository.simple.Pojo;
+import fr.petitl.relational.repository.simple.PojoDTO;
 import org.springframework.data.repository.query.Param;
 
 /**
@@ -23,6 +24,6 @@ public interface PojoRepository extends RelationalRepository<Pojo, String>, Pojo
     @Query("SELECT * FROM Pojo WHERE name = ?0")
     List<Pojo> testGetPositionalList(String name);
 
-    @Query("SELECT * FROM Pojo WHERE name = ?0")
-    <E> E testApplyStream(String name, @CollectorFunction(Pojo.class) Function<Stream<Pojo>, E> apply);
+    @Query("SELECT id, name FROM Pojo WHERE name = ?0")
+    <E> E testApplyStream(String name, @CollectorFunction(PojoDTO.class) Function<Stream<PojoDTO>, E> apply);
 }

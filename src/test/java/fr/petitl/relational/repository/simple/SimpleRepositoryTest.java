@@ -89,7 +89,7 @@ public class SimpleRepositoryTest extends SpringTest {
 
     @Test
     public void testApplyMethod() {
-        List<Pojo> pojos = repository.testApplyStream("ho", it -> it.collect(Collectors.toList()));
+        List<PojoDTO> pojos = repository.testApplyStream("ho", it -> it.collect(Collectors.toList()));
         Assert.assertEquals(1, pojos.size());
         Assert.assertEquals("hey", pojos.get(0).getId());
     }

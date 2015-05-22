@@ -44,8 +44,15 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
 
         this.method = method;
         this.template = template;
-        // TODO: dirty hack for now...
-        mappingType = this.getReturnedObjectType().equals(Object.class) ? this.getDomainClass() : this.getReturnedObjectType();
+
+        // Infer the mapping type
+        // Default is the domain type
+        Parameter functionParameter = ((StreamParameters) getParameters()).getCollectorParameter();
+        if (functionParameter != null) {
+            mappingType = functionParameter.getForcedDomainType();
+        } else {
+            mappingType = this.getReturnedObjectType().equals(Object.class) ? this.getDomainClass() : this.getReturnedObjectType();
+        }
     }
 
     public Query getAnnotation() {
@@ -77,12 +84,13 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
     }
 
     protected Function<Object[], Function<Stream<Object>, Object>> computeFetchMethod() {
+        // If the return type is not a list or a page or any weirdness... just do a fetch one
         if (mappingType.isAssignableFrom(this.getReturnType().getType())) {
             return obj -> it -> it.findFirst().orElse(null);
         }
 
         StreamParameters parameters = (StreamParameters) getParameters();
-        Parameter functionParameter = parameters.getFunctionParameter();
+        Parameter functionParameter = parameters.getCollectorParameter();
         if (functionParameter != null) {
             //noinspection unchecked
             return obj -> (Function<Stream<Object>, Object>) obj[functionParameter.getIndex()];

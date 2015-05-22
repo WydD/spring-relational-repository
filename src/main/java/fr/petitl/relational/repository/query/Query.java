@@ -11,7 +11,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Query {
-    public String value();
-
-//    public Class<? extends RowMapper> mapper() default RowMapper.class;
+    String value();
 }
