@@ -95,6 +95,12 @@ public class SimpleRepositoryTest extends SpringTest {
     }
 
     @Test
+    public void testCustomMapper() {
+        PojoDTO dto = repository.testCustomMapper();
+        Assert.assertEquals("hey", dto.getId());
+    }
+
+    @Test
     public void testCustomImpl() {
         Assert.assertEquals(42, repository.dummy());
     }

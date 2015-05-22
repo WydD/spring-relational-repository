@@ -81,9 +81,9 @@ public class RelationalQuery<E> {
         return template.executeQuery(sql.getNativeSql(), null, getPrepareStatement(), mapper);
     }
 
-    public <F> F fetch(Function<Stream<E>, F> transformer) {
+    public <F> F fetch(Function<Stream<E>, F> collectorFunction) {
         try (Stream<E> out = stream()) {
-            return transformer.apply(out);
+            return collectorFunction.apply(out);
         }
     }
 

@@ -122,13 +122,17 @@ public class RelationalTemplate extends JdbcAccessor {
 
     public <E> int[] executeBatch(String sql, Stream<E> input, StatementMapper<E> pse) {
         return execute(statement -> {
-            Iterable<E> iterator = input::iterator;
-            for (E e : iterator) {
-                if (pse != null)
-                    pse.prepare(statement, e);
-                statement.addBatch();
+            try {
+                Iterable<E> iterator = input::iterator;
+                for (E e : iterator) {
+                    if (pse != null)
+                        pse.prepare(statement, e);
+                    statement.addBatch();
+                }
+            } finally {
+
+                input.close();
             }
-            input.close();
             return statement.executeBatch();
         }, con -> con.prepareStatement(sql));
     }
@@ -141,7 +145,7 @@ public class RelationalTemplate extends JdbcAccessor {
         }, con -> con.prepareStatement(sql));
     }
 
-    public <E> Stream<E> mapInsert(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
+    public <E> Stream<E> executeStreamInsertGenerated(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
         return executeDontClose(statement -> {
             Connection connection = statement.getConnection();
             return input.onClose(() -> {
@@ -183,6 +187,14 @@ public class RelationalTemplate extends JdbcAccessor {
                 release(connection);
             }).map(it -> translateExceptions("StreamMapping", sql, () -> rowMapper.mapRow(it)));
         }, con -> con.prepareStatement(sql));
+    }
+
+    public <E> RelationalQuery<E> createQuery(String sql, RowMapper<E> mapper) {
+        return new RelationalQuery<>(sql, this, mapper);
+    }
+
+    public <E> RelationalQuery<E> createQuery(String sql, Class<E> mappingType) {
+        return new RelationalQuery<>(sql, this, mappingFactory.beanMapping(mappingType).getMapper());
     }
 
     protected interface JdbcCallback<E> {
