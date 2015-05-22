@@ -6,8 +6,6 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import fr.petitl.relational.repository.repository.model.MainGenerated;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import org.junit.Assert;
@@ -19,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
+import static fr.petitl.relational.repository.TestUtils.set;
 import static org.junit.Assert.*;
 
 public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
@@ -146,7 +145,7 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
         Date createdDate = new Date();
         MainGenerated beforeFirst = new MainGenerated(null, "First", createdDate);
         MainGenerated beforeSecond = new MainGenerated(null, "Second", createdDate);
-        List<MainGenerated> all = Lists.newArrayList(repository.save(Arrays.asList(beforeFirst, beforeSecond)));
+        List<MainGenerated> all = (List<MainGenerated>) repository.save(Arrays.asList(beforeFirst, beforeSecond));
 
         assertEquals(createdDate, all.get(0).getCreatedDate());
         assertEquals("First", all.get(0).getName());
@@ -222,13 +221,13 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
     @Test
     public void testStreamAllIds() throws Exception {
         assertTrue(repository.fetchAllIds(out -> {
-            assertEquals(Sets.newHashSet(1, 2, 3), out.collect(Collectors.toSet()));
+            assertEquals(set(1, 2, 3), out.collect(Collectors.toSet()));
             return true;
         }));
     }
 
     protected void verifyFindAll(Collection<MainGenerated> all, Integer... ids) {
-        HashSet<Integer> idSet = Sets.newHashSet(ids);
+        Set<Integer> idSet = set(ids);
         if (idSet.contains(1)) {
             verifyPojo1(all.stream().filter(it -> it.getId() == 1).findFirst().get());
         }

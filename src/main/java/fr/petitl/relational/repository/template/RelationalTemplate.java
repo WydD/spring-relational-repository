@@ -24,9 +24,9 @@ import org.springframework.util.Assert;
  */
 public class RelationalTemplate extends JdbcAccessor {
 
-    private final BeanDialect dialect;
-    private final MappingFactory mappingFactory;
-    private NativeJdbcExtractor nativeJdbcExtractor;
+    protected final BeanDialect dialect;
+    protected final MappingFactory mappingFactory;
+    protected NativeJdbcExtractor nativeJdbcExtractor;
 
     public RelationalTemplate(DataSource ds, BeanDialect dialect) {
         this.dialect = dialect;
@@ -62,7 +62,7 @@ public class RelationalTemplate extends JdbcAccessor {
         });
     }
 
-    public <T> T executeDontClose(ConnectionCallback<T> action) throws DataAccessException {
+    protected <T> T executeDontClose(ConnectionCallback<T> action) throws DataAccessException {
         Assert.notNull(action, "Callback object must not be null");
         Connection con = DataSourceUtils.getConnection(getDataSource());
         return translateExceptions("ConnectionCallback", null, () -> {
@@ -92,7 +92,7 @@ public class RelationalTemplate extends JdbcAccessor {
         }, supplier);
     }
 
-    public <E extends Statement, T> T executeDontClose(StatementCallback<E, T> action, StatementProvider<E> supplier)
+    protected <E extends Statement, T> T executeDontClose(StatementCallback<E, T> action, StatementProvider<E> supplier)
             throws DataAccessException {
         return executeDontClose((Connection con) -> {
             E stmt = null;

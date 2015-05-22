@@ -9,6 +9,7 @@
     <version>0.1-SNAPSHOT</version>
     <properties>
         <spring.version>4.1.4.RELEASE</spring.version>
+        <spring.data.commons.version>1.9.0.RELEASE</spring.data.commons.version>
     </properties>
     <build>
         <plugins>
@@ -40,6 +41,20 @@
             <artifactId>spring-jdbc</artifactId>
             <version>${spring.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
+            <version>${spring.data.commons.version}</version>
+        </dependency>
+
+
+        <!-- Tests -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
@@ -63,22 +78,6 @@
             <artifactId>logback-classic</artifactId>
             <version>1.1.2</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>15.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-tx</artifactId>
-            <version>${spring.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.data</groupId>
-            <artifactId>spring-data-commons</artifactId>
-            <version>1.9.0.RELEASE</version>
         </dependency>
     </dependencies>
 </project>

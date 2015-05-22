@@ -7,14 +7,14 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import fr.petitl.relational.repository.repository.model.MainNotGenerated;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class MainNotGeneratedRepositoryTest extends AbstractRepositoryTest {
 
@@ -60,7 +60,7 @@ public class MainNotGeneratedRepositoryTest extends AbstractRepositoryTest {
         Date createdDate = new Date();
         MainNotGenerated beforeFirst = new MainNotGenerated(4, "First", createdDate);
         MainNotGenerated beforeSecond = new MainNotGenerated(5, "Second", createdDate);
-        List<MainNotGenerated> all = Lists.newArrayList(repository.save(Arrays.asList(beforeFirst, beforeSecond)));
+        List<MainNotGenerated> all = (List<MainNotGenerated>) repository.save(Arrays.asList(beforeFirst, beforeSecond));
 
         assertEquals(createdDate, all.get(0).getCreatedDate());
         assertEquals("First", all.get(0).getName());

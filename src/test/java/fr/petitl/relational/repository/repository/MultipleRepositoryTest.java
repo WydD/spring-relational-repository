@@ -6,8 +6,6 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import fr.petitl.relational.repository.repository.model.Multiple;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import org.junit.Assert;
@@ -19,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
+import static fr.petitl.relational.repository.TestUtils.set;
 import static org.junit.Assert.*;
 
 public class MultipleRepositoryTest extends AbstractRepositoryTest {
@@ -148,7 +147,7 @@ public class MultipleRepositoryTest extends AbstractRepositoryTest {
         Date createdDate = new Date();
         Multiple beforeFirst = new Multiple(null, "woot", "First", createdDate);
         Multiple beforeSecond = new Multiple(null, "w00t", "Second", createdDate);
-        List<Multiple> all = Lists.newArrayList(repository.save(Arrays.asList(beforeFirst, beforeSecond)));
+        List<Multiple> all = (List<Multiple>) repository.save(Arrays.asList(beforeFirst, beforeSecond));
 
         assertEquals(createdDate, all.get(0).getCreatedDate());
         assertEquals("woot", all.get(0).getType());
@@ -227,13 +226,13 @@ public class MultipleRepositoryTest extends AbstractRepositoryTest {
     @Test
     public void testStreamAllIds() throws Exception {
         assertTrue(repository.fetchAllIds(out -> {
-            assertEquals(Sets.newHashSet(1, 2, 3), out.map(it -> it[0]).collect(Collectors.toSet()));
+            assertEquals(set(1, 2, 3), out.map(it -> it[0]).collect(Collectors.toSet()));
             return true;
         }));
     }
 
     protected void verifyFindAll(Collection<Multiple> all, Integer... ids) {
-        HashSet<Integer> idSet = Sets.newHashSet(ids);
+        Set<Integer> idSet = set(ids);
         if (idSet.contains(1)) {
             verifyPojo1(all.stream().filter(it -> it.getId() == 1).findFirst().get());
         }
