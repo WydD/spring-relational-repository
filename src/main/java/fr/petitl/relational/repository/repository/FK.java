@@ -11,7 +11,7 @@ public class FK<ID extends Serializable, TYPE> {
     private Function<ID, TYPE> resolver;
     private TYPE resolved;
 
-    public FK(ID id, Function<ID, TYPE> resolver) {
+    protected FK(ID id, Function<ID, TYPE> resolver) {
         if (id == null) {
             throw new IllegalArgumentException("Null ID given as foreign key argument");
         }
@@ -19,7 +19,7 @@ public class FK<ID extends Serializable, TYPE> {
         this.resolver = resolver;
     }
 
-    public FK(ID id, TYPE resolved, Function<ID, TYPE> resolver) {
+    protected FK(ID id, TYPE resolved, Function<ID, TYPE> resolver) {
         this(id, resolver);
         this.resolved = resolved;
     }
