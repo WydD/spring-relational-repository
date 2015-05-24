@@ -1,9 +1,8 @@
 package fr.petitl.relational.repository.template.bean;
 
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.io.Serializable;
+import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +12,9 @@ import java.util.regex.Pattern;
 import fr.petitl.relational.repository.annotation.Column;
 import fr.petitl.relational.repository.annotation.Table;
 import fr.petitl.relational.repository.dialect.BeanDialect;
+import fr.petitl.relational.repository.repository.FK;
+import fr.petitl.relational.repository.repository.RelationalRepository;
+import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import org.springframework.beans.BeanUtils;
 
@@ -31,7 +33,7 @@ public class BeanMappingData<T> {
     private Map<String, FieldMappingData> columns = new HashMap<>();
     private final Table tableAnnotation;
 
-    public BeanMappingData(Class<T> clazz, BeanDialect dialect) {
+    public BeanMappingData(Class<T> clazz, BeanDialect dialect, RelationalTemplate template) {
         this.clazz = clazz;
 
         tableAnnotation = clazz.getDeclaredAnnotation(Table.class);
@@ -59,12 +61,40 @@ public class BeanMappingData<T> {
                     throw new IllegalStateException(e);
                 }
             }
-            if (colName == null || colName.isEmpty())
-                colName = camelToSnakeCase(field.getName());
+            final Class fkId;
+            final Class fkType;
+            if (FK.class.isAssignableFrom(field.getType())) {
+                ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+                Type[] fkParam = genericType.getActualTypeArguments();
+                //noinspection unchecked
+                fkId = (Class<?>) fkParam[0];
+                fkType = (Class<?>) fkParam[1];
+            } else {
+                fkId = null;
+                fkType = null;
+            }
+            if (colName == null || colName.isEmpty()) {
+                colName = generateDefaultColumnName(field, fkId != null);
+            }
             if (reader == null)
                 reader = dialect.defaultReader();
             if (writer == null)
                 writer = dialect.defaultWriter();
+
+            // Wrap the foreign key resolution if any
+            if (fkId != null) {
+                final BeanAttributeReader finalReader = reader;
+                reader = (rs, column, sourceField) -> {
+                    RelationalRepository repository = template.getRepositoryForType(fkType, fkId);
+                    //noinspection unchecked
+                    return repository.fid((Serializable) finalReader.readAttribute(rs, column, sourceField));
+                };
+                final BeanAttributeWriter finalWriter = writer;
+                writer = (ps, column, o, sourceField) -> {
+                    FK fk = (FK) o;
+                    finalWriter.writeAttribute(ps, column, fk.getId(), sourceField);
+                };
+            }
 
             PropertyDescriptor f = BeanUtils.getPropertyDescriptor(field.getDeclaringClass(), field.getName());
             if (f == null)
@@ -82,6 +112,15 @@ public class BeanMappingData<T> {
 
         mapper = new BeanMapper<>(this);
         unmapper = new BeanUnmapper<>(getFieldData());
+    }
+
+    protected String generateDefaultColumnName(Field field, boolean hasFK) {
+        String colName;
+        colName = camelToSnakeCase(field.getName());
+        if (hasFK && !colName.endsWith("_id")) {
+            colName += "_id";
+        }
+        return colName;
     }
 
     public FieldMappingData fieldForColumn(String columnName) {

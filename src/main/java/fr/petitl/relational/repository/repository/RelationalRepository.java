@@ -22,4 +22,8 @@ public interface RelationalRepository<T, ID extends Serializable> extends Paging
     public <S extends T> S update(S entity);
 
     public <S extends T> void update(Stream<S> entity);
+
+    public FK<ID, T> fid(ID id);
+
+    public FK<ID, T> fk(T obj);
 }

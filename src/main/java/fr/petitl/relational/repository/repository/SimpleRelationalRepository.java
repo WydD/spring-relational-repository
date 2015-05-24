@@ -35,6 +35,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     public SimpleRelationalRepository(RelationalEntityInformation<T, ID> entityInformation, RelationalTemplate template) {
         this.template = template;
         sql = template.getDialect().sql(entityInformation);
+        template.registerRepository(entityInformation, this);
 
         mappingData = entityInformation.getMappingData();
 
@@ -133,6 +134,16 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         }
         if (count[0] != result.length)
             throw new IncorrectResultSizeDataAccessException(count[0], result.length);
+    }
+
+    @Override
+    public FK<ID, T> fid(ID id) {
+        return new FK<>(id, this::findOne);
+    }
+
+    @Override
+    public FK<ID, T> fk(T obj) {
+        return new FK<>(idGetter.apply(obj), obj, this::findOne);
     }
 
     protected <S extends T> S create(S entity) {

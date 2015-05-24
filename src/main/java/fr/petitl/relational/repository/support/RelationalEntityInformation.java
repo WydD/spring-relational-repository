@@ -45,19 +45,19 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
             if (declaredAnnotation != null) {
                 if (declaredAnnotation.generated()) {
                     if (generated != null) {
-                        throw new UnsupportedOperationException("Two generated columns are not supported yet");
+                        throw new UnsupportedOperationException("Two generated columns are not supported yet in class " + getJavaType().getName());
                     }
                     generated = fieldData;
                 }
 
                 FieldMappingData old = pks.put(declaredAnnotation.order(), fieldData);
                 if (old != null) {
-                    throw new IllegalStateException("Two primary keys with the same order");
+                    throw new IllegalStateException("Two primary keys with the same order in class " + getJavaType().getName());
                 }
             }
         }
         if (pks.isEmpty()) {
-            throw new IllegalStateException("No primary keys specified");
+            throw new IllegalStateException("No primary keys specified in class " + getJavaType().getName());
         }
         this.generatedPK = generated != null;
 

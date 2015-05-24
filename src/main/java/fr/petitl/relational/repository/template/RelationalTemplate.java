@@ -1,14 +1,19 @@
 package fr.petitl.relational.repository.template;
 
 import javax.sql.DataSource;
+import java.io.Serializable;
 import java.sql.*;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import fr.petitl.relational.repository.dialect.BeanDialect;
+import fr.petitl.relational.repository.repository.RelationalRepository;
+import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.MappingFactory;
 import org.springframework.dao.DataAccessException;
@@ -40,7 +45,7 @@ public class RelationalTemplate extends JdbcAccessor {
     }
 
     public <T> BeanMappingData<T> getMappingData(Class<T> clazz) {
-        return mappingFactory.beanMapping(clazz);
+        return mappingFactory.beanMapping(clazz, this);
     }
 
 
@@ -194,7 +199,26 @@ public class RelationalTemplate extends JdbcAccessor {
     }
 
     public <E> RelationalQuery<E> createQuery(String sql, Class<E> mappingType) {
-        return new RelationalQuery<>(sql, this, mappingFactory.beanMapping(mappingType).getMapper());
+        return new RelationalQuery<>(sql, this, getMappingData(mappingType).getMapper());
+    }
+
+    protected Map<String, RelationalRepository<?,?>> repositoriesByType = new HashMap<>();
+    public <T, ID extends Serializable> void registerRepository(RelationalEntityInformation<T, ID> entityInformation, RelationalRepository<T, ID> repository) {
+        String serial =  entityInformation.getIdType().getName() + ":" + entityInformation.getJavaType().getName();
+        RelationalRepository<?, ?> old = repositoriesByType.put(serial, repository);
+        if (old != null) {
+            throw new IllegalStateException("Cannot register repository "+repository.getClass().getName()+" there is already another repository for this type: "+old.getClass().getName());
+        }
+    }
+
+    public <T, ID extends Serializable> RelationalRepository<T, ID> getRepositoryForType(Class<T> type, Class<T> idType) {
+        String serial = idType.getName() + ":" + type.getName();
+        //noinspection unchecked
+        RelationalRepository<T, ID> repository = (RelationalRepository<T, ID>) repositoriesByType.get(serial);
+        if (repository == null) {
+            throw new IllegalArgumentException("No repository has been declared for types "+serial);
+        }
+        return repository;
     }
 
     protected interface JdbcCallback<E> {
