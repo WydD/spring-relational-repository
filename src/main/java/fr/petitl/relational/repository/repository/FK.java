@@ -12,6 +12,9 @@ public class FK<ID extends Serializable, TYPE> {
     private TYPE resolved;
 
     public FK(ID id, Function<ID, TYPE> resolver) {
+        if (id == null) {
+            throw new IllegalArgumentException("Null ID given as foreign key argument");
+        }
         this.id = id;
         this.resolver = resolver;
     }
