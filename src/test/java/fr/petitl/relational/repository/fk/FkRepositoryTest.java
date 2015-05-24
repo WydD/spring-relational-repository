@@ -53,7 +53,7 @@ public class FkRepositoryTest extends SpringTest {
     private LocationRepository locationRepository;
 
     @Before
-    public void testInsert() {
+    public void before() {
         rennes = locationRepository.save(new Location("Rennes"));
         Assert.assertNotNull(rennes.getId());
         eventRepository.save(new Event("Stunfest", locationRepository.fk(rennes)));
