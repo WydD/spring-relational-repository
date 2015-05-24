@@ -63,9 +63,11 @@ public class BeanMappingData<T> {
             }
             final Class fkId;
             final Class fkType;
+            // Foreign key resolution
             if (FK.class.isAssignableFrom(field.getType())) {
                 ParameterizedType genericType = (ParameterizedType) field.getGenericType();
                 Type[] fkParam = genericType.getActualTypeArguments();
+                // Fetch types in generic declaration
                 //noinspection unchecked
                 fkId = (Class<?>) fkParam[0];
                 fkType = (Class<?>) fkParam[1];
@@ -86,13 +88,15 @@ public class BeanMappingData<T> {
                 final BeanAttributeReader finalReader = reader;
                 reader = (rs, column, sourceField) -> {
                     RelationalRepository repository = template.getRepositoryForType(fkType, fkId);
+
+                    Serializable id = (Serializable) finalReader.readAttribute(rs, column, sourceField);
                     //noinspection unchecked
-                    return repository.fid((Serializable) finalReader.readAttribute(rs, column, sourceField));
+                    return id != null ? repository.fid(id) : null;
                 };
                 final BeanAttributeWriter finalWriter = writer;
                 writer = (ps, column, o, sourceField) -> {
                     FK fk = (FK) o;
-                    finalWriter.writeAttribute(ps, column, fk.getId(), sourceField);
+                    finalWriter.writeAttribute(ps, column, o != null ? fk.getId() : null, sourceField);
                 };
             }
 
