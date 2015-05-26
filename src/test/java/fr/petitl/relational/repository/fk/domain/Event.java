@@ -18,7 +18,8 @@ public class Event {
      * This foreign key references a Location instance using the column "location_id"
      * (having `_id` is implicit by default). (see db-schema.sql in the fk package)
      *
-     * The resolution is made outside the query using FK::resolve
+     * The object resolution is made outside the main query using FK::resolve
+     * To do so, a repository wiring is done to get the repository able to resolve the operation Integer -> Location.
      */
     private FK<Integer, Location> location;
 

@@ -49,8 +49,10 @@ public class FkRepositoryTest extends SpringTest {
         // (which knows the ID type and resolution strategies)
         final Event stunfest = new Event("Stunfest", locationRepository.fk(rennes));
         // locationRepository.fid(rennes.getId()) works as well to create the fk to rennes
+        // ... but this one has a resolved entity because it was given by the user
+        Assert.assertTrue(stunfest.getLocation().isResolved());
 
-        // now we save
+        // and now we save
         eventRepository.save(stunfest);
     }
 
