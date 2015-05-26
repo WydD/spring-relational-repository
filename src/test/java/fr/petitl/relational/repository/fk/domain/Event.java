@@ -1,4 +1,4 @@
-package fr.petitl.relational.repository.fk;
+package fr.petitl.relational.repository.fk.domain;
 
 import fr.petitl.relational.repository.annotation.PK;
 import fr.petitl.relational.repository.annotation.Table;
@@ -14,6 +14,12 @@ public class Event {
 
     private String name;
 
+    /**
+     * This foreign key references a Location instance using the column "location_id"
+     * (having `_id` is implicit by default). (see db-schema.sql in the fk package)
+     *
+     * The resolution is made outside the query using FK::resolve
+     */
     private FK<Integer, Location> location;
 
     public Event() {

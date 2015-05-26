@@ -35,6 +35,10 @@ public class FK<ID extends Serializable, TYPE> {
         return forceResolve();
     }
 
+    public boolean isResolved() {
+        return resolved != null;
+    }
+
     public TYPE forceResolve() {
         resolved = resolver.apply(id);
         return resolved;

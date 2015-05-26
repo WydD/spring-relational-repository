@@ -1,6 +1,6 @@
 package fr.petitl.relational.repository.fk.repository;
 
-import fr.petitl.relational.repository.fk.Event;
+import fr.petitl.relational.repository.fk.domain.Event;
 import fr.petitl.relational.repository.query.Query;
 import fr.petitl.relational.repository.repository.RelationalRepository;
 

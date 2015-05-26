@@ -1,4 +1,4 @@
-package fr.petitl.relational.repository.fk;
+package fr.petitl.relational.repository.fk.domain;
 
 import fr.petitl.relational.repository.annotation.PK;
 import fr.petitl.relational.repository.annotation.Table;
