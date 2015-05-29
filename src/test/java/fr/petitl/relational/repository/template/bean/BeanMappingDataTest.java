@@ -83,9 +83,8 @@ public class BeanMappingDataTest {
             return;
         }
         MethodAttributeMapping instance = new MethodAttributeMapping();
-        Date date = new Date(321);
-        instance.createdDate = date;
-        assertEquals(new Date(date.getTime() - 1), createdDate.readMethod.apply(instance));
+        instance.createdDate = new Date(321);
+        assertEquals(new Date(320), createdDate.readMethod.apply(instance));
         assertEquals(-1, instance.time);
         Date date2 = new Date(123);
         createdDate.writeMethod.accept(instance, date2);
