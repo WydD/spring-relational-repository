@@ -1,8 +1,6 @@
 package fr.petitl.relational.repository.support;
 
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.sql.ResultSet;
 import java.util.*;
 import java.util.function.Function;
@@ -65,42 +63,29 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         pkFields = new ArrayList<>(pks.values());
         if (pkFields.size() == 1) {
             FieldMappingData field = pkFields.get(0);
-            idType = field.readMethod.getReturnType();
+            idType = field.field.getType();
             idGetter = instance -> {
-                try {
-                    //noinspection unchecked
-                    return (ID) field.readMethod.invoke(instance);
-                } catch (InvocationTargetException | IllegalAccessException e) {
-                    throw new IllegalStateException(e);
-                }
+                //noinspection unchecked
+                return (ID) field.readMethod.apply(instance);
             };
         } else {
             idType = Object[].class;
             idGetter = instance -> {
-                try {
-                    //noinspection unchecked
-                    Object[] objects = new Object[pkFields.size()];
-                    for (int i = 0; i < objects.length; i++) {
-                        Method field = pkFields.get(i).readMethod;
-                        objects[i] = field.invoke(instance);
-                    }
-                    //noinspection unchecked
-                    return (ID) objects;
-                } catch (InvocationTargetException | IllegalAccessException e) {
-                    throw new IllegalStateException(e);
+                //noinspection unchecked
+                Object[] objects = new Object[pkFields.size()];
+                for (int i = 0; i < objects.length; i++) {
+                    objects[i] = pkFields.get(i).readMethod.apply(instance);
                 }
+                //noinspection unchecked
+                return (ID) objects;
             };
         }
         if (generatedPK) {
             final FieldMappingData finalGenerated = generated;
             idSetter = (T instance) -> (ResultSet rs) -> {
-                try {
-                    Object id = finalGenerated.attributeReader.readAttribute(rs, 1, finalGenerated.field);
-                    finalGenerated.writeMethod.invoke(instance, id);
-                    return instance;
-                } catch (InvocationTargetException | IllegalAccessException e) {
-                    throw new IllegalStateException(e);
-                }
+                Object id = finalGenerated.attributeReader.readAttribute(rs, 1, finalGenerated.field);
+                finalGenerated.writeMethod.accept(instance, id);
+                return instance;
             };
         }
 

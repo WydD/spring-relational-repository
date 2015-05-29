@@ -17,9 +17,6 @@ import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassRelativeResourceLoader;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
@@ -95,10 +92,7 @@ public class FkRepositoryTest extends SpringTest {
     public static class BaseConfiguration {
         @Bean
         public DataSource dataSource() {
-            return new EmbeddedDatabaseBuilder(new ClassRelativeResourceLoader(FkRepositoryTest.class)).
-                    setType(EmbeddedDatabaseType.H2).
-                    addScript("db-schema.sql").
-                    build();
+            return createEmbbededDataSource(FkRepositoryTest.class, "db-schema.sql");
         }
 
         @Bean

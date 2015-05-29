@@ -1,6 +1,5 @@
 package fr.petitl.relational.repository.template.bean;
 
-import java.lang.reflect.InvocationTargetException;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
@@ -20,14 +19,10 @@ public class BeanUnmapper<T> implements StatementMapper<T> {
 
     @Override
     public void prepare(PreparedStatement pse, T instance) throws SQLException {
-        try {
-            int c = 1;
-            for (FieldMappingData data : fieldData) {
-                Object object = data.readMethod.invoke(instance);
-                data.attributeWriter.writeAttribute(pse, c++, object, data.field);
-            }
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException(e);
+        int c = 1;
+        for (FieldMappingData data : fieldData) {
+            Object object = data.readMethod.apply(instance);
+            data.attributeWriter.writeAttribute(pse, c++, object, data.field);
         }
     }
 }

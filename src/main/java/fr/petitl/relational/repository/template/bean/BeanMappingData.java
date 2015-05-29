@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import fr.petitl.relational.repository.annotation.Column;
@@ -100,16 +102,49 @@ public class BeanMappingData<T> {
                 };
             }
 
+            FieldMappingData data;
             PropertyDescriptor f = BeanUtils.getPropertyDescriptor(field.getDeclaringClass(), field.getName());
-            if (f == null)
-                throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find property descriptor");
-            Method writeMethod = f.getWriteMethod();
-            if (writeMethod == null)
-                throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find write method");
-            Method readMethod = f.getReadMethod();
-            if (readMethod == null)
-                throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find read method");
-            FieldMappingData data = new FieldMappingData(colName, field, writeMethod, readMethod, writer, reader);
+            if (f != null) {
+                Method writeMethod = f.getWriteMethod();
+                if (writeMethod == null)
+                    throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find write method");
+                Method readMethod = f.getReadMethod();
+                if (readMethod == null)
+                    throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find read method");
+
+                data = new FieldMappingData(colName, field, (obj, value) -> {
+                    try {
+                        writeMethod.invoke(obj, value);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        throw new IllegalStateException(e);
+                    }
+                }, obj -> {
+                    try {
+                        return readMethod.invoke(obj);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        throw new IllegalStateException(e);
+                    }
+                }, writer, reader);
+            } else {
+                if (!Modifier.isPublic(field.getModifiers())) {
+                    throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find property descriptor");
+                }
+                BiConsumer<Object, Object> setter = (obj, value) -> {
+                    try {
+                        field.set(obj, value);
+                    } catch (IllegalAccessException e) {
+                        throw new IllegalStateException(e);
+                    }
+                };
+                Function<Object, Object> getter = obj -> {
+                    try {
+                        return field.get(obj);
+                    } catch (IllegalAccessException e) {
+                        throw new IllegalStateException(e);
+                    }
+                };
+                data = new FieldMappingData(colName, field, setter, getter, writer, reader);
+            }
             fields.put(field, data);
             columns.put(colName, data);
         }

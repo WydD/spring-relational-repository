@@ -1,6 +1,5 @@
 package fr.petitl.relational.repository.template.bean;
 
-import java.lang.reflect.InvocationTargetException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -33,18 +32,14 @@ public class BeanMapper<T> implements RowMapper<T> {
     }
 
     private <S extends T> S mapToInstance(ResultSet rs, S instance) throws SQLException {
-        try {
-            ResultSetMetaData meta = rs.getMetaData();
-            for (int i = 1; i <= meta.getColumnCount(); i++) {
-                String name = meta.getColumnName(i);
+        ResultSetMetaData meta = rs.getMetaData();
+        for (int i = 1; i <= meta.getColumnCount(); i++) {
+            String name = meta.getColumnName(i);
 
-                FieldMappingData fieldData = mappingData.fieldForColumn(name);
+            FieldMappingData fieldData = mappingData.fieldForColumn(name);
 
-                Object object = fieldData.attributeReader.readAttribute(rs, i, fieldData.field);
-                fieldData.writeMethod.invoke(instance, object);
-            }
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException(e);
+            Object object = fieldData.attributeReader.readAttribute(rs, i, fieldData.field);
+            fieldData.writeMethod.accept(instance, object);
         }
 
         return instance;

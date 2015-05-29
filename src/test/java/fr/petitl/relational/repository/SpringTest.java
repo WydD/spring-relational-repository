@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import org.junit.runner.RunWith;
+import org.springframework.core.io.ClassRelativeResourceLoader;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
@@ -24,6 +25,17 @@ public abstract class SpringTest {
         current = new EmbeddedDatabaseBuilder().setType(EmbeddedDatabaseType.H2).build();
         return current;
     }
+
+    public static EmbeddedDatabase createEmbbededDataSource(Class<?> resourceClass, String path) {
+        if (current != null)
+            current.shutdown();
+        current = new EmbeddedDatabaseBuilder(new ClassRelativeResourceLoader(resourceClass)).
+                setType(EmbeddedDatabaseType.H2).
+                addScript(path).
+                build();
+        return current;
+    }
+
 
     public static DataSource createEmbbededDataSource(String... sql) {
         EmbeddedDatabase ds = createEmbbededDataSource();
