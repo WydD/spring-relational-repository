@@ -26,7 +26,7 @@ public class BeanMappingDataTest {
         try {
             mappingData.fieldForColumn("createddate");
             fail("Found createddate which is not supposed to happen");
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         FieldMappingData createdDate;
         try {
@@ -58,7 +58,7 @@ public class BeanMappingDataTest {
         }
 
         public Date getCreatedDate() {
-            return createdDate;
+            return new Date(createdDate.getTime() - 1);
         }
 
         public void setCreatedDate(Date createdDate) {
@@ -73,7 +73,7 @@ public class BeanMappingDataTest {
         try {
             mappingData.fieldForColumn("createddate");
             fail("Found createddate which is not supposed to happen");
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         FieldMappingData createdDate;
         try {
@@ -85,7 +85,7 @@ public class BeanMappingDataTest {
         MethodAttributeMapping instance = new MethodAttributeMapping();
         Date date = new Date(321);
         instance.createdDate = date;
-        assertEquals(date, createdDate.readMethod.apply(instance));
+        assertEquals(new Date(date.getTime() - 1), createdDate.readMethod.apply(instance));
         assertEquals(-1, instance.time);
         Date date2 = new Date(123);
         createdDate.writeMethod.accept(instance, date2);
