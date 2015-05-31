@@ -9,6 +9,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import fr.petitl.relational.repository.template.bean.BeanAttributeWriter;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  *
@@ -21,6 +25,7 @@ public class RelationalQuery<E> {
 
 
     private Function<Object, ColumnMapper> defaultSetter;
+    private Pageable pageable;
 
     public static interface PrepareStep {
         public void prepareStatement(PreparedStatement ps) throws SQLException;
@@ -52,6 +57,11 @@ public class RelationalQuery<E> {
         return setParameter(position, defaultSetter.apply(object));
     }
 
+    public RelationalQuery<E> setPageable(Pageable pageable) {
+        this.pageable = pageable;
+        return this;
+    }
+
     private RelationalQuery<E> setParameter(List<Integer> resolved, ColumnMapper prepare) {
         if (!preparing) {
             clearParameters();
@@ -72,6 +82,10 @@ public class RelationalQuery<E> {
         toPrepare.clear();
     }
 
+    public void clearPageable() {
+        this.pageable = null;
+    }
+
     public RelationalQuery<E> addPrepareStep(PrepareStep prepareColumn) {
         toPrepare.add(prepareColumn);
         return this;
@@ -85,6 +99,30 @@ public class RelationalQuery<E> {
         try (Stream<E> out = stream()) {
             return collectorFunction.apply(out);
         }
+    }
+
+    public Page<E> page() {
+        if (pageable == null) {
+            throw new IllegalStateException("Querying a page without a Pageable");
+        }
+        TransactionTemplate transactionTemplate = template.getTransactionTemplate();
+        return transactionTemplate.execute(status -> {
+            List<E> result;
+            Long count;
+
+            // Get the list of the page
+            String nativeSql = template.getDialect().paging().paging(sql.getNativeSql(), pageable);
+            StatementMapper<Object> prepare = getPrepareStatement();
+            try (Stream<E> tmp = template.executeQuery(nativeSql, null, prepare, mapper)) {
+                result = tmp.collect(Collectors.toList());
+            }
+            // count the result
+            String countQuery = "SELECT COUNT(*) FROM (" + this.sql.getNativeSql() + ") SUBQ";
+            try (Stream<Long> tmp = template.executeQuery(countQuery, null, prepare, rs -> rs.getLong(1))) {
+                count = tmp.findFirst().get();
+            }
+            return new PageImpl<>(result, pageable, count);
+        });
     }
 
     public List<E> list() {

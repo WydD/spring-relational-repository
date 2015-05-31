@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import fr.petitl.relational.repository.template.RelationalQuery;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mapping.model.IllegalMappingException;
 import org.springframework.data.repository.query.Parameter;
 import org.springframework.data.repository.query.Parameters;
@@ -56,6 +57,12 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
             } else {
                 relationalQuery.setParameter(parameter.getIndex(), value);
             }
+        }
+        int pageableIndex = parametersConfig.getPageableIndex();
+        if (pageableIndex >= 0) {
+            Pageable pageable = (Pageable) parameters[pageableIndex];
+            relationalQuery.setPageable(pageable);
+            return relationalQuery.page();
         }
         return relationalQuery.fetch(fetchMethod.apply(parameters));
     }

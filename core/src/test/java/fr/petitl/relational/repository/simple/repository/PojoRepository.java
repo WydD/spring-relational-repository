@@ -9,6 +9,8 @@ import fr.petitl.relational.repository.query.Query;
 import fr.petitl.relational.repository.repository.RelationalRepository;
 import fr.petitl.relational.repository.simple.Pojo;
 import fr.petitl.relational.repository.simple.PojoDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 
 /**
@@ -23,6 +25,9 @@ public interface PojoRepository extends RelationalRepository<Pojo, String>, Pojo
 
     @Query("SELECT * FROM Pojo WHERE name = ?0")
     List<Pojo> testGetPositionalList(String name);
+
+    @Query("SELECT * FROM Pojo WHERE name LIKE ?0")
+    Page<Pojo> testPaged(String name, Pageable pageable);
 
     @Query("SELECT id, name FROM Pojo WHERE name = ?0")
     <E> E testApplyStream(String name, @CollectorFunction(PojoDTO.class) Function<Stream<PojoDTO>, E> apply);

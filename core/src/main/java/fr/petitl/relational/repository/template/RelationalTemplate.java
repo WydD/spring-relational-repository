@@ -16,22 +16,32 @@ import fr.petitl.relational.repository.repository.RelationalRepository;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.MappingFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ConnectionCallback;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcAccessor;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.nativejdbc.NativeJdbcExtractor;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
 /**
  *
  */
-public class RelationalTemplate extends JdbcAccessor {
+public class RelationalTemplate extends JdbcAccessor implements ApplicationContextAware {
+    private static final Logger log = LoggerFactory.getLogger(RelationalTemplate.class);
 
     protected final BeanDialect dialect;
     protected final MappingFactory mappingFactory;
     protected NativeJdbcExtractor nativeJdbcExtractor;
+    private TransactionTemplate transactionTemplate;
 
     public RelationalTemplate(DataSource ds, BeanDialect dialect) {
         this.dialect = dialect;
@@ -219,6 +229,20 @@ public class RelationalTemplate extends JdbcAccessor {
             throw new IllegalArgumentException("No repository has been declared for types "+serial);
         }
         return repository;
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        try {
+            transactionTemplate = applicationContext.getBean(TransactionTemplate.class);
+        } catch (NoSuchBeanDefinitionException e) {
+            log.warn("No transaction template has been declared! Creating one based using the data source.");
+            transactionTemplate = new TransactionTemplate(new DataSourceTransactionManager(getDataSource()));
+        }
+    }
+
+    public TransactionTemplate getTransactionTemplate() {
+        return transactionTemplate;
     }
 
     protected interface JdbcCallback<E> {

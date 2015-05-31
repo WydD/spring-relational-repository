@@ -69,11 +69,10 @@ public class RelationalRepositoryQueryMethod extends QueryMethod {
         String sql = annotation.value();
 
         RowMapper mapper = template.<Object>getMappingData(mappingType).getMapper();
+        Parameters<?, ?> parameters = this.getParameters();
         if (this.isPageQuery() || this.isSliceQuery()) {
-            // Paged queries
-            throw new IllegalStateException("Unsupported page queries");
+            return new RelationalRepositoryQuery(sql, template, mapper, this, null, parameters);
         } else {
-            Parameters<?, ?> parameters = this.getParameters();
             return new RelationalRepositoryQuery(sql, template, mapper, this, computeFetchMethod(), parameters);
         }
     }
