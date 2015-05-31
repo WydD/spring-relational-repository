@@ -4,7 +4,7 @@ import javax.sql.DataSource;
 
 import fr.petitl.relational.repository.EnableRelationalRepositories;
 import fr.petitl.relational.repository.SpringTest;
-import fr.petitl.relational.repository.dialect.generic.GenericBeanDialect;
+import fr.petitl.relational.repository.dialect.BeanDialectProvider;
 import fr.petitl.relational.repository.fk.domain.Event;
 import fr.petitl.relational.repository.fk.domain.Location;
 import fr.petitl.relational.repository.fk.repository.EventRepository;
@@ -97,7 +97,7 @@ public class FkRepositoryTest extends SpringTest {
 
         @Bean
         public RelationalTemplate relationalTemplate(DataSource dataSource) {
-            return new RelationalTemplate(dataSource, new GenericBeanDialect());
+            return new RelationalTemplate(dataSource, BeanDialectProvider.h2());
         }
     }
 

@@ -36,6 +36,11 @@ public class BeanMapper<T> implements RowMapper<T> {
         for (int i = 1; i <= meta.getColumnCount(); i++) {
             String name = meta.getColumnName(i);
 
+            // Ignore column names with double "_" prefix (internal)
+            if (name.startsWith("__")) {
+                continue;
+            }
+
             FieldMappingData fieldData = mappingData.fieldForColumn(name);
 
             Object object = fieldData.attributeReader.readAttribute(rs, i, fieldData.field);

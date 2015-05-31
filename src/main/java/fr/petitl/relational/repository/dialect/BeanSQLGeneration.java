@@ -1,12 +1,9 @@
-package fr.petitl.relational.repository.repository;
-
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+package fr.petitl.relational.repository.dialect;
 
 /**
  *
  */
-public interface SQLGeneration {
+public interface BeanSQLGeneration {
     String countStar();
 
     String deleteById();
@@ -26,8 +23,4 @@ public interface SQLGeneration {
     String update();
 
     String selectAll(int idCount);
-
-    String selectAll(Pageable page);
-
-    String selectAll(Sort sort);
 }

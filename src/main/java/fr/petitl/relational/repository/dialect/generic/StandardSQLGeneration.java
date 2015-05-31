@@ -7,20 +7,18 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import fr.petitl.relational.repository.repository.SQLGeneration;
+import fr.petitl.relational.repository.dialect.BeanSQLGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.FieldMappingData;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 import static java.lang.String.format;
 
 /**
- * Inspired by the SqlGenerator pattern of nurkiewicz
+ * Inspired by the SqlGenerator pattern of nurkiewicz (but is way different now)
  * https://github.com/nurkiewicz/spring-data-jdbc-repository/blob/master/src/main/java/com/nurkiewicz/jdbcrepository/sql/SqlGenerator.java
  */
-public class LimitBasedSQLGeneration<T, ID extends Serializable> implements SQLGeneration {
+public class StandardSQLGeneration<T, ID extends Serializable> implements BeanSQLGeneration {
     protected final String update;
     protected final String insertInto;
     protected final String tableName;
@@ -44,7 +42,7 @@ public class LimitBasedSQLGeneration<T, ID extends Serializable> implements SQLG
 
     protected final RelationalEntityInformation<T, ID> entityInformation;
 
-    public LimitBasedSQLGeneration(RelationalEntityInformation<T, ID> entityInformation) {
+    public StandardSQLGeneration(RelationalEntityInformation<T, ID> entityInformation) {
         this.entityInformation = entityInformation;
 
         mappingData = entityInformation.getMappingData();
@@ -138,7 +136,7 @@ public class LimitBasedSQLGeneration<T, ID extends Serializable> implements SQLG
         }
     }
 
-    private String compositeIdIn(int count) {
+    protected String compositeIdIn(int count) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < count; i++) {
             if (i > 0)
@@ -155,35 +153,4 @@ public class LimitBasedSQLGeneration<T, ID extends Serializable> implements SQLG
         }
         return builder.toString();
     }
-
-    @Override
-    public String selectAll(Pageable page) {
-        return selectAll(page.getSort()) + limitClause(page);
-    }
-
-    @Override
-    public String selectAll(Sort sort) {
-        return selectAll() + sortClause(sort);
-    }
-
-    protected String sortClause(Sort sort) {
-        if (sort == null) {
-            return "";
-        }
-
-        StringBuilder builder = new StringBuilder(" ORDER BY ");
-        for (Iterator<Sort.Order> iterator = sort.iterator(); iterator.hasNext(); ) {
-            Sort.Order order = iterator.next();
-            builder.append(order.getProperty()).append(" ").append(order.getDirection().name());
-            if (iterator.hasNext()) {
-                builder.append(", ");
-            }
-        }
-        return builder.toString();
-    }
-
-    protected String limitClause(Pageable page) {
-        return " LIMIT " + page.getPageNumber() * page.getPageSize() + ", " + page.getPageSize();
-    }
-
 }

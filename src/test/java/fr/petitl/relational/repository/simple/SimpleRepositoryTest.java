@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 import fr.petitl.relational.repository.EnableRelationalRepositories;
 import fr.petitl.relational.repository.SpringTest;
-import fr.petitl.relational.repository.dialect.generic.GenericBeanDialect;
+import fr.petitl.relational.repository.dialect.BeanDialectProvider;
 import fr.petitl.relational.repository.simple.repository.PojoRepository;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import org.junit.Assert;
@@ -35,7 +35,7 @@ public class SimpleRepositoryTest extends SpringTest {
 
         @Bean
         public RelationalTemplate relationalTemplate(DataSource dataSource) {
-            return new RelationalTemplate(dataSource, new GenericBeanDialect());
+            return new RelationalTemplate(dataSource, BeanDialectProvider.h2());
         }
     }
 

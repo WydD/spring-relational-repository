@@ -10,9 +10,7 @@ import fr.petitl.relational.repository.template.bean.BeanAttributeWriter;
 import org.springframework.jdbc.core.StatementCreatorUtils;
 import org.springframework.jdbc.support.JdbcUtils;
 
-public class GenericBeanAttributeManager implements BeanAttributeReader, BeanAttributeWriter {
-    public static final GenericBeanAttributeManager INSTANCE = new GenericBeanAttributeManager();
-
+public class SpringJDBCAttributeWriter implements BeanAttributeReader, BeanAttributeWriter {
     public void writeAttribute(PreparedStatement ps, int column, Object o, Field sourceField) throws SQLException {
         int sqlType = StatementCreatorUtils.javaTypeToSqlParameterType(sourceField == null ? o.getClass() : sourceField.getType());
         StatementCreatorUtils.setParameterValue(ps, column, sqlType, o);
@@ -20,8 +18,5 @@ public class GenericBeanAttributeManager implements BeanAttributeReader, BeanAtt
 
     public Object readAttribute(ResultSet rs, int column, Field sourceField) throws SQLException {
         return JdbcUtils.getResultSetValue(rs, column, sourceField.getType());
-    }
-
-    private GenericBeanAttributeManager() {
     }
 }

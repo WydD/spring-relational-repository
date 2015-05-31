@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import fr.petitl.relational.repository.dialect.BeanSQLGeneration;
+import fr.petitl.relational.repository.dialect.PagingGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.RelationalQuery;
 import fr.petitl.relational.repository.template.RelationalTemplate;
@@ -25,16 +27,18 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     private final Function<T, ID> idGetter;
     private final RelationalEntityInformation<T, ID> entityInformation;
-    private final SQLGeneration sql;
+    private final BeanSQLGeneration sql;
     private final BeanMappingData<T> mappingData;
 
     private final boolean generatedPK;
+    private final PagingGeneration paging;
 
     private RelationalTemplate template;
 
     public SimpleRelationalRepository(RelationalEntityInformation<T, ID> entityInformation, RelationalTemplate template) {
         this.template = template;
         sql = template.getDialect().sql(entityInformation);
+        paging = template.getDialect().paging();
         template.registerRepository(entityInformation, this);
 
         mappingData = entityInformation.getMappingData();
@@ -195,13 +199,14 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     @Override
     public List<T> findAll(Sort sort) {
-        return query(sql.selectAll(sort), mappingData.getMapper()).list();
+        return query(paging.sort(sql.selectAll(), sort), mappingData.getMapper()).list();
     }
 
     @Override
     public Page<T> findAll(Pageable page) {
-        List<T> content = query(sql.selectAll(page), mappingData.getMapper()).list();
-        return new PageImpl<>(content, page, query(sql.countStar(), COUNT_MAPPER).findOne());
+        String sql = paging.paging(this.sql.selectAll(), page);
+        List<T> content = query(sql, mappingData.getMapper()).list();
+        return new PageImpl<>(content, page, query(this.sql.countStar(), COUNT_MAPPER).findOne());
     }
 
     @Override
