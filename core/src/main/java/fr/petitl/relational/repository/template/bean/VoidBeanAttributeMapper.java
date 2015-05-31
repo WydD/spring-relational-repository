@@ -8,7 +8,7 @@ import java.sql.SQLException;
 /**
  *
  */
-public class VoidBeanAttributeMapper implements BeanAttributeReader, BeanAttributeWriter {
+public class VoidBeanAttributeMapper implements BeanAttributeMapper {
     private VoidBeanAttributeMapper() {
 
     }

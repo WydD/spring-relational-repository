@@ -51,14 +51,21 @@ public class BeanMappingData<T> {
             if (annotation != null) {
                 colName = annotation.name();
                 try {
-                    // Create mapper instances, dont do it if it's VoidBeanMapper which is only a place holder
-                    Class<? extends BeanAttributeReader> readerClass = annotation.reader();
-                    if (!readerClass.equals(VoidBeanAttributeMapper.class))
-                        reader = readerClass.newInstance();
+                    Class<? extends BeanAttributeMapper> mapperClass = annotation.mapper();
+                    if (!mapperClass.equals(VoidBeanAttributeMapper.class)) {
+                        BeanAttributeMapper mapper = mapperClass.newInstance();
+                        reader = mapper;
+                        writer = mapper;
+                    } else {
+                        // Create mapper instances, dont do it if it's VoidBeanMapper which is only a place holder
+                        Class<? extends BeanAttributeReader> readerClass = annotation.reader();
+                        if (!readerClass.equals(VoidBeanAttributeMapper.class))
+                            reader = readerClass.newInstance();
 
-                    Class<? extends BeanAttributeWriter> writerClass = annotation.writer();
-                    if (!writerClass.equals(VoidBeanAttributeMapper.class))
-                        writer = writerClass.newInstance();
+                        Class<? extends BeanAttributeWriter> writerClass = annotation.writer();
+                        if (!writerClass.equals(VoidBeanAttributeMapper.class))
+                            writer = writerClass.newInstance();
+                    }
                 } catch (InstantiationException | IllegalAccessException e) {
                     throw new IllegalStateException(e);
                 }

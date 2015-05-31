@@ -15,6 +15,8 @@ import fr.petitl.relational.repository.template.bean.VoidBeanAttributeMapper;
 public @interface Column {
     String name() default "";
 
+    Class<? extends VoidBeanAttributeMapper> mapper() default VoidBeanAttributeMapper.class;
+
     Class<? extends BeanAttributeReader> reader() default VoidBeanAttributeMapper.class;
 
     Class<? extends BeanAttributeWriter> writer() default VoidBeanAttributeMapper.class;

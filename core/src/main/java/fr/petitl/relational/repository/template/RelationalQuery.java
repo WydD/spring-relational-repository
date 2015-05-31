@@ -58,6 +58,11 @@ public class RelationalQuery<E> {
     }
 
     public RelationalQuery<E> setPageable(Pageable pageable) {
+        if (!preparing) {
+            clearParameters();
+            clearPageable();
+            preparing = true;
+        }
         this.pageable = pageable;
         return this;
     }
@@ -65,6 +70,7 @@ public class RelationalQuery<E> {
     private RelationalQuery<E> setParameter(List<Integer> resolved, ColumnMapper prepare) {
         if (!preparing) {
             clearParameters();
+            clearPageable();
             preparing = true;
         }
         if (resolved.size() == 1) {
@@ -144,9 +150,12 @@ public class RelationalQuery<E> {
     private StatementMapper<Object> getPrepareStatement() {
         preparing = false;
         // No prepare is necessary if no operation has been made
-        if (toPrepare.isEmpty())
+        if (toPrepare.isEmpty() && pageable == null)
             return null;
         return (ps, ignored) -> {
+            if (pageable != null) {
+                ps.setFetchSize(pageable.getPageSize());
+            }
             for (PrepareStep op : toPrepare) {
                 op.prepareStatement(ps);
             }

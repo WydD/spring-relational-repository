@@ -5,6 +5,5 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public interface BeanAttributeReader {
-    public Object readAttribute(ResultSet rs, int column, Field sourceField) throws SQLException;
-
+    Object readAttribute(ResultSet rs, int column, Field sourceField) throws SQLException;
 }
