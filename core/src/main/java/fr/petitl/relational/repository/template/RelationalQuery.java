@@ -152,7 +152,7 @@ public class RelationalQuery<E> {
         // No prepare is necessary if no operation has been made
         if (toPrepare.isEmpty() && pageable == null)
             return null;
-        return (ps, ignored) -> {
+        return (ps, ignored, i) -> {
             if (pageable != null) {
                 ps.setFetchSize(pageable.getPageSize());
             }

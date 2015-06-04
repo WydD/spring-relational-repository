@@ -3,6 +3,7 @@ To implement
 * Group By mappings
 * Other dialects
 * Default type mapping override
+* Embed columns
 
 To be checked
 * FK management

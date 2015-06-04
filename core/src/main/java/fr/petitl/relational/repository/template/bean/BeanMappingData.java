@@ -27,7 +27,8 @@ public class BeanMappingData<T> {
 
     private final BeanMapper<T> mapper;
     private final BeanUnmapper<T> unmapper;
-    private Pattern camelCasePattern = Pattern.compile("([a-z])([A-Z])");
+    private static Pattern camelCasePattern = Pattern.compile("([a-z])([A-Z])");
+    private final List<FieldMappingData> fieldData;
 
     private Class<T> clazz;
 
@@ -157,7 +158,8 @@ public class BeanMappingData<T> {
         }
 
         mapper = new BeanMapper<>(this);
-        unmapper = new BeanUnmapper<>(getFieldData());
+        fieldData = new ArrayList<>(fields.values());
+        unmapper = new BeanUnmapper<>(fieldData);
     }
 
     protected String generateDefaultColumnName(Field field, boolean hasFK) {
@@ -177,11 +179,11 @@ public class BeanMappingData<T> {
     }
 
     public List<FieldMappingData> getFieldData() {
-        return new ArrayList<>(fields.values());
+        return fieldData;
     }
 
     public String camelToSnakeCase(String camelCase) {
-        return this.camelCasePattern.matcher(camelCase).replaceAll("$1_$2").toLowerCase();
+        return camelCasePattern.matcher(camelCase).replaceAll("$1_$2").toLowerCase();
     }
 
     @SuppressWarnings("unchecked")

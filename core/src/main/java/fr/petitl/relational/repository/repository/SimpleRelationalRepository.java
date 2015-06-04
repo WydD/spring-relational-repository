@@ -60,14 +60,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     private <E> void setId(ID id, RelationalQuery<E> query, int base) {
-        if (id instanceof Object[]) {
-            Object[] objects = (Object[]) id;
-            for (int i = 0; i < objects.length; i++) {
-                query.setParameter(i + base, objects[i]);
-            }
-        } else {
-            query.setParameter(base, id);
-        }
+        query.addPrepareStep(pse -> entityInformation.getIdUnmapper().prepare(pse, id, base));
     }
 
     @Override
@@ -217,20 +210,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     @SuppressWarnings("unchecked")
     @Override
     public <F> F fetchAllIds(Function<Stream<ID>, F> apply) {
-        return query(sql.selectIds(), rs -> {
-            List<FieldMappingData> pkFields = entityInformation.getPkFields();
-            if (pkFields.size() == 1) {
-                FieldMappingData fieldData = pkFields.get(0);
-                return (ID) fieldData.attributeReader.readAttribute(rs, 1, fieldData.field);
-            } else {
-                Object[] result = new Object[pkFields.size()];
-                for (int i = 0; i < result.length; i++) {
-                    FieldMappingData fieldData = pkFields.get(i);
-                    result[i] = fieldData.attributeReader.readAttribute(rs, i + 1, fieldData.field);
-                }
-                return (ID) result;
-            }
-        }).fetch(apply);
+        return query(sql.selectIds(), rs -> entityInformation.getIdMapper().mapRow(rs)).fetch(apply);
     }
 
     protected RelationalTemplate getTemplate() {

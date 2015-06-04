@@ -18,11 +18,10 @@ public class BeanUnmapper<T> implements StatementMapper<T> {
     }
 
     @Override
-    public void prepare(PreparedStatement pse, T instance) throws SQLException {
-        int c = 1;
+    public void prepare(PreparedStatement pse, T instance, int offset) throws SQLException {
         for (FieldMappingData data : fieldData) {
             Object object = data.readMethod.apply(instance);
-            data.attributeWriter.writeAttribute(pse, c++, object, data.field);
+            data.attributeWriter.writeAttribute(pse, offset++, object, data.field);
         }
     }
 }

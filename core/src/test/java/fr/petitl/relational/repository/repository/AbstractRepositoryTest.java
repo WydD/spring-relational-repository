@@ -23,6 +23,6 @@ public abstract class AbstractRepositoryTest {
     protected <T, ID extends Serializable> SimpleRelationalRepository<T, ID> getRepository(Class<T> clazz, String... sql) {
         DataSource ds = SpringTest.createEmbbededDataSource(sql);
         RelationalTemplate template = new RelationalTemplate(ds, BeanDialectProvider.h2());
-        return new SimpleRelationalRepository<>(new RelationalEntityInformation<>(template.getMappingData(clazz)), template);
+        return new SimpleRelationalRepository<>(new RelationalEntityInformation<>(template.getMappingData(clazz), template), template);
     }
 }

@@ -1,16 +1,20 @@
 package fr.petitl.relational.repository.support;
 
-import java.io.Serializable;
-import java.sql.ResultSet;
-import java.util.*;
-import java.util.function.Function;
-
 import fr.petitl.relational.repository.annotation.PK;
+import fr.petitl.relational.repository.annotation.PKClass;
+import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
+import fr.petitl.relational.repository.template.StatementMapper;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.BeanUnmapper;
 import fr.petitl.relational.repository.template.bean.FieldMappingData;
 import org.springframework.data.repository.core.support.AbstractEntityInformation;
+
+import java.io.Serializable;
+import java.sql.ResultSet;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -25,9 +29,11 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
     private Function<T, RowMapper<T>> idSetter;
     private BeanMappingData<T> mappingData;
     private final BeanUnmapper<T> updateUnmapper;
+    private final RowMapper<ID> idMapper;
+    private final StatementMapper<ID> idUnmapper;
 
 
-    public RelationalEntityInformation(BeanMappingData<T> mappingData) {
+    public RelationalEntityInformation(BeanMappingData<T> mappingData, RelationalTemplate template) {
         super(mappingData.getBeanClass());
 
         this.mappingData = mappingData;
@@ -68,17 +74,58 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
                 //noinspection unchecked
                 return (ID) field.readMethod.apply(instance);
             };
+            final FieldMappingData pkField = pkFields.get(0);
+            //noinspection unchecked
+            idMapper = rs -> (ID) pkField.attributeReader.readAttribute(rs, 1, pkField.field);
+            idUnmapper = (pse, id, offset) -> pkField.attributeWriter.writeAttribute(pse, offset, id, pkField.field);
         } else {
-            idType = Object[].class;
-            idGetter = instance -> {
+            final PKClass annotation = mappingData.getBeanClass().getAnnotation(PKClass.class);
+            if (annotation != null) {
+                idType = annotation.value();
                 //noinspection unchecked
-                Object[] objects = new Object[pkFields.size()];
-                for (int i = 0; i < objects.length; i++) {
-                    objects[i] = pkFields.get(i).readMethod.apply(instance);
-                }
-                //noinspection unchecked
-                return (ID) objects;
-            };
+                BeanMappingData<ID> pkMapping = (BeanMappingData<ID>) template.getMappingData(idType);
+                idMapper = pkMapping.getMapper();
+                idUnmapper = new BeanUnmapper<>(pkFields.stream().map(it -> pkMapping.fieldForColumn(it.columnName)).collect(Collectors.toList()));
+                idGetter = instance -> {
+                    try {
+                        //noinspection unchecked
+                        final ID o = (ID) idType.getConstructor().newInstance();
+                        for (FieldMappingData pkField : pkFields) {
+                            final FieldMappingData field = pkMapping.fieldForColumn(pkField.columnName);
+                            field.writeMethod.accept(o, pkField.readMethod.apply(instance));
+                        }
+                        return o;
+                    } catch (ReflectiveOperationException e) {
+                        throw new IllegalStateException(e);
+                    }
+                };
+            } else {
+                idType = Object[].class;
+                idGetter = instance -> {
+                    //noinspection unchecked
+                    Object[] objects = new Object[pkFields.size()];
+                    for (int i = 0; i < objects.length; i++) {
+                        objects[i] = pkFields.get(i).readMethod.apply(instance);
+                    }
+                    //noinspection unchecked
+                    return (ID) objects;
+                };
+                idMapper = rs -> {
+                    Object[] result = new Object[pkFields.size()];
+                    for (int i = 0; i < result.length; i++) {
+                        FieldMappingData fieldData = pkFields.get(i);
+                        result[i] = fieldData.attributeReader.readAttribute(rs, i + 1, fieldData.field);
+                    }
+                    return (ID) result;
+                };
+                idUnmapper = (pse, id, offset) -> {
+                    Object[] objects = (Object[]) id;
+                    for (int i = 0; i < pkFields.size(); i++) {
+                        FieldMappingData fieldData = pkFields.get(i);
+                        fieldData.attributeWriter.writeAttribute(pse, i + offset, objects[i], fieldData.field);
+                    }
+                };
+            }
         }
         if (generatedPK) {
             final FieldMappingData finalGenerated = generated;
@@ -122,6 +169,14 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
 
     public BeanMappingData<T> getMappingData() {
         return mappingData;
+    }
+
+    public RowMapper<ID> getIdMapper() {
+        return idMapper;
+    }
+
+    public StatementMapper<ID> getIdUnmapper() {
+        return idUnmapper;
     }
 
     @SuppressWarnings("unchecked")

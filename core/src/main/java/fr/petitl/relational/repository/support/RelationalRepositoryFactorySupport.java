@@ -24,7 +24,7 @@ public class RelationalRepositoryFactorySupport extends RepositoryFactorySupport
 
     @Override
     public <T, ID extends Serializable> RelationalEntityInformation<T, ID> getEntityInformation(Class<T> c) {
-        return new RelationalEntityInformation<>(operations.getMappingData(c));
+        return new RelationalEntityInformation<>(operations.getMappingData(c), operations);
     }
 
     @Override
