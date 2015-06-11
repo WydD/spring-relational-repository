@@ -5,7 +5,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import fr.petitl.relational.repository.SpringTest;
-import fr.petitl.relational.repository.dialect.BeanDialectProvider;
+import fr.petitl.relational.repository.dialect.SimpleDialectProvider;
 import org.junit.Test;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ConnectionCallback;
@@ -14,7 +14,7 @@ import static org.junit.Assert.*;
 
 public class RelationalTemplateTest {
 
-    private RelationalTemplate template = new RelationalTemplate(SpringTest.createEmbbededDataSource(), BeanDialectProvider.h2());
+    private RelationalTemplate template = new RelationalTemplate(SpringTest.createEmbbededDataSource(), SimpleDialectProvider.h2());
 
     private StatementCallback<Statement, Statement> testStatement = (Statement st) -> {
         assertNotNull(st);

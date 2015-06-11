@@ -2,7 +2,7 @@ package fr.petitl.relational.repository.dialect;
 
 import java.util.function.Function;
 
-import fr.petitl.relational.repository.dialect.generic.SpringJDBCAttributeWriter;
+import fr.petitl.relational.repository.dialect.generic.SpringJDBCAttributeMapper;
 import fr.petitl.relational.repository.dialect.generic.StandardSQLGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanAttributeReader;
@@ -28,16 +28,13 @@ public class BeanDialect {
     public BeanDialect(Function<RelationalEntityInformation<?, ?>, BeanSQLGeneration> sqlProvider, PagingGeneration paging) {
         this.sqlProvider = sqlProvider;
         this.paging = paging;
-        SpringJDBCAttributeWriter manager = new SpringJDBCAttributeWriter();
+        SpringJDBCAttributeMapper manager = new SpringJDBCAttributeMapper();
         this.reader = manager;
         this.writer = manager;
     }
 
     public BeanDialect(PagingGeneration paging) {
-        this.sqlProvider = StandardSQLGeneration::new;
-        this.paging = paging;
-        this.reader = new SpringJDBCAttributeWriter();
-        this.writer = new SpringJDBCAttributeWriter();
+        this(StandardSQLGeneration::new, paging);
     }
 
     public BeanSQLGeneration sql(RelationalEntityInformation<?, ?> entityInformation) {

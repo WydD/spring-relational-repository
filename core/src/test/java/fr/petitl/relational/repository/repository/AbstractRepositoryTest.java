@@ -7,7 +7,7 @@ import java.time.ZoneId;
 import java.util.Date;
 
 import fr.petitl.relational.repository.SpringTest;
-import fr.petitl.relational.repository.dialect.BeanDialectProvider;
+import fr.petitl.relational.repository.dialect.SimpleDialectProvider;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 
@@ -22,7 +22,7 @@ public abstract class AbstractRepositoryTest {
 
     protected <T, ID extends Serializable> SimpleRelationalRepository<T, ID> getRepository(Class<T> clazz, String... sql) {
         DataSource ds = SpringTest.createEmbbededDataSource(sql);
-        RelationalTemplate template = new RelationalTemplate(ds, BeanDialectProvider.h2());
+        RelationalTemplate template = new RelationalTemplate(ds, SimpleDialectProvider.h2());
         return new SimpleRelationalRepository<>(new RelationalEntityInformation<>(template.getMappingData(clazz), template), template);
     }
 }

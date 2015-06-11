@@ -6,7 +6,7 @@ import fr.petitl.relational.repository.dialect.paging.*;
 /**
  *
  */
-public class BeanDialectProvider {
+public class SimpleDialectProvider {
     public static BeanDialect h2() {
         return new BeanDialect(new LimitPaging());
     }

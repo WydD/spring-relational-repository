@@ -3,7 +3,7 @@ package fr.petitl.relational.repository.template.bean;
 import java.util.Date;
 
 import fr.petitl.relational.repository.dialect.BeanDialect;
-import fr.petitl.relational.repository.dialect.BeanDialectProvider;
+import fr.petitl.relational.repository.dialect.SimpleDialectProvider;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -14,7 +14,7 @@ import static org.junit.Assert.fail;
  */
 public class BeanMappingDataTest {
 
-    public static final BeanDialect DIALECT = BeanDialectProvider.h2();
+    public static final BeanDialect DIALECT = SimpleDialectProvider.h2();
 
     public static class PublicAttributeMapping {
         public int id;
