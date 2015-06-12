@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.petitl.relational.pg.json.JsonField;
 import fr.petitl.relational.pg.json.JsonProxy;
 import fr.petitl.relational.repository.dialect.generic.SpringJDBCAttributeMapper;
+import org.postgis.Geometry;
+import org.postgis.PGgeometry;
 import org.postgresql.util.PGobject;
 
 import java.io.IOException;
@@ -32,6 +34,10 @@ public class PGAttributeMapper extends SpringJDBCAttributeMapper {
             final JsonProxy proxy = (JsonProxy) o;
             writeJson(ps, column, proxy.getObject(), proxy.isBinary());
             return;
+        }
+        if (o instanceof Geometry) {
+            // Convert into geometry
+            o = new PGgeometry((Geometry) o);
         }
         if (o instanceof PGobject) {
             ps.setObject(column, o);
@@ -70,6 +76,11 @@ public class PGAttributeMapper extends SpringJDBCAttributeMapper {
                 // standard exception handling
                 throw new SQLException(e);
             }
+        }
+        // Manage all extended object from the driver (postgis, money, interval...)
+        if (Geometry.class.isAssignableFrom(targetField.getType())) {
+            final PGgeometry pg = (PGgeometry) rs.getObject(column);
+            return pg.getGeometry();
         }
         // Manage all extended object from the driver (postgis, money, interval...)
         if (PGobject.class.isAssignableFrom(targetField.getType())) {
