@@ -21,7 +21,7 @@ Some examples:
 As you can see, the conversion is done as close as possible to the human interpretation.
 
 ### Foreign Keys
-A foreign key field is a field that leads to an other table primary key. Therefore, in classical database design, a postfix ```\_id``` is often used. To do this the most efficient way without hurting too much the field naming, this postfix is automatically added if the field is detected as a foreign key handle (see [the foreign key documentation](ForeignKey)) AND if the generated column name does not already have the postfix at the end.
+A foreign key field is a field that leads to an other table primary key. Therefore, in classical database design, a postfix ```_id``` is often used. To do this the most efficient way without hurting too much the field naming, this postfix is automatically added if the field is detected as a foreign key handle (see [the foreign key documentation](ForeignKey)) AND if the generated column name does not already have the postfix at the end.
 
 This way you would have the following mapping:
 ```java
