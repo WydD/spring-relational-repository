@@ -15,7 +15,9 @@ import fr.petitl.relational.repository.dialect.BeanDialect;
 import fr.petitl.relational.repository.repository.RelationalRepository;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
+import fr.petitl.relational.repository.template.bean.CamelToSnakeConvention;
 import fr.petitl.relational.repository.template.bean.MappingFactory;
+import fr.petitl.relational.repository.template.bean.NamingConvention;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -41,13 +43,19 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
     protected final BeanDialect dialect;
     protected final MappingFactory mappingFactory;
     protected NativeJdbcExtractor nativeJdbcExtractor;
-    private TransactionTemplate transactionTemplate;
+    protected TransactionTemplate transactionTemplate;
+    protected final NamingConvention namingConvention;
 
     public RelationalTemplate(DataSource ds, BeanDialect dialect) {
+        this(ds, dialect, new CamelToSnakeConvention());
+    }
+
+    public RelationalTemplate(DataSource ds, BeanDialect dialect, NamingConvention namingConvention) {
         this.dialect = dialect;
         mappingFactory = new MappingFactory(dialect);
         this.setDataSource(ds);
         afterPropertiesSet();
+        this.namingConvention = namingConvention;
     }
 
     public BeanDialect getDialect() {
@@ -243,6 +251,10 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
 
     public TransactionTemplate getTransactionTemplate() {
         return transactionTemplate;
+    }
+
+    public NamingConvention getNamingConvention() {
+        return namingConvention;
     }
 
     protected interface JdbcCallback<E> {

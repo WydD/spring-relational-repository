@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
 import fr.petitl.relational.repository.annotation.Column;
 import fr.petitl.relational.repository.annotation.Table;
@@ -27,7 +26,6 @@ public class BeanMappingData<T> {
 
     private final BeanMapper<T> mapper;
     private final BeanUnmapper<T> unmapper;
-    private static Pattern camelCasePattern = Pattern.compile("([a-z])([A-Z])");
     private final List<FieldMappingData> fieldData;
 
     private Class<T> clazz;
@@ -86,7 +84,7 @@ public class BeanMappingData<T> {
                 fkType = null;
             }
             if (colName == null || colName.isEmpty()) {
-                colName = generateDefaultColumnName(field, fkId != null);
+                colName = template.getNamingConvention().generateDefaultColumnName(field, fkId != null);
             }
             if (reader == null)
                 reader = dialect.defaultReader();
@@ -162,15 +160,6 @@ public class BeanMappingData<T> {
         unmapper = new BeanUnmapper<>(fieldData);
     }
 
-    protected String generateDefaultColumnName(Field field, boolean hasFK) {
-        String colName;
-        colName = camelToSnakeCase(field.getName());
-        if (hasFK && !colName.endsWith("_id")) {
-            colName += "_id";
-        }
-        return colName;
-    }
-
     public FieldMappingData fieldForColumn(String columnName) {
         FieldMappingData data = columns.get(columnName.toLowerCase());
         if (data == null)
@@ -180,10 +169,6 @@ public class BeanMappingData<T> {
 
     public List<FieldMappingData> getFieldData() {
         return fieldData;
-    }
-
-    public String camelToSnakeCase(String camelCase) {
-        return camelCasePattern.matcher(camelCase).replaceAll("$1_$2").toLowerCase();
     }
 
     @SuppressWarnings("unchecked")
