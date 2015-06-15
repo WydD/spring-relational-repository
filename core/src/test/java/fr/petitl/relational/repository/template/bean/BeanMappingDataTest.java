@@ -4,7 +4,9 @@ import java.util.Date;
 
 import fr.petitl.relational.repository.dialect.BeanDialect;
 import fr.petitl.relational.repository.dialect.SimpleDialectProvider;
+import fr.petitl.relational.repository.template.RelationalTemplate;
 import org.junit.Test;
+import org.springframework.jdbc.datasource.DelegatingDataSource;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -17,13 +19,13 @@ public class BeanMappingDataTest {
     public static final BeanDialect DIALECT = SimpleDialectProvider.h2();
 
     public static class PublicAttributeMapping {
-        public int id;
+        private int id;
         public Date createdDate;
     }
 
     @Test
     public void testPublicAttributeMapping() {
-        BeanMappingData<PublicAttributeMapping> mappingData = new BeanMappingData<>(PublicAttributeMapping.class, DIALECT, null);
+        BeanMappingData<PublicAttributeMapping> mappingData = new BeanMappingData<>(PublicAttributeMapping.class, DIALECT, new RelationalTemplate(new DelegatingDataSource(), DIALECT));
         try {
             mappingData.fieldForColumn("createddate");
             fail("Found createddate which is not supposed to happen");

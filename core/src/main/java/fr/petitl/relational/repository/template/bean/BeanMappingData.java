@@ -30,14 +30,10 @@ public class BeanMappingData<T> {
 
     private Class<T> clazz;
 
-    private Map<Field, FieldMappingData> fields = new HashMap<>();
     private Map<String, FieldMappingData> columns = new HashMap<>();
-    private final Table tableAnnotation;
 
     public BeanMappingData(Class<T> clazz, BeanDialect dialect, RelationalTemplate template) {
         this.clazz = clazz;
-
-        tableAnnotation = clazz.getDeclaredAnnotation(Table.class);
 
         for (Field field : clazz.getDeclaredFields()) {
             if (Modifier.isTransient(field.getModifiers()) ||
@@ -133,7 +129,11 @@ public class BeanMappingData<T> {
                 }, writer, reader);
             } else {
                 if (!Modifier.isPublic(field.getModifiers())) {
-                    throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find property descriptor");
+                    try {
+                        field.setAccessible(true);
+                    } catch (SecurityException se) {
+                        throw new IllegalStateException("Can not manage property " + field.getName() + ": can't find property descriptor, field is not public and security refuses override", se);
+                    }
                 }
                 BiConsumer<Object, Object> setter = (obj, value) -> {
                     try {
@@ -151,12 +151,11 @@ public class BeanMappingData<T> {
                 };
                 data = new FieldMappingData(colName, field, setter, getter, writer, reader);
             }
-            fields.put(field, data);
             columns.put(colName, data);
         }
 
         mapper = new BeanMapper<>(this);
-        fieldData = new ArrayList<>(fields.values());
+        fieldData = new ArrayList<>(columns.values());
         unmapper = new BeanUnmapper<>(fieldData);
     }
 
@@ -183,9 +182,5 @@ public class BeanMappingData<T> {
 
     public Class<T> getBeanClass() {
         return clazz;
-    }
-
-    public Table getTableAnnotation() {
-        return tableAnnotation;
     }
 }

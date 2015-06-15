@@ -48,7 +48,7 @@ public class StandardSQLGeneration<T, ID extends Serializable> implements BeanSQ
         mappingData = entityInformation.getMappingData();
         compositeKey = entityInformation.getPkFields().size() > 1;
 
-        tableName = mappingData.getTableAnnotation().value();
+        tableName = entityInformation.getTableName();
 
         pkFields = new HashSet<>(entityInformation.getPkFields());
 

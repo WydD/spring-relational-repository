@@ -2,6 +2,7 @@ package fr.petitl.relational.repository.support;
 
 import fr.petitl.relational.repository.annotation.PK;
 import fr.petitl.relational.repository.annotation.PKClass;
+import fr.petitl.relational.repository.annotation.Table;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import fr.petitl.relational.repository.template.StatementMapper;
@@ -31,6 +32,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
     private final BeanUnmapper<T> updateUnmapper;
     private final RowMapper<ID> idMapper;
     private final StatementMapper<ID> idUnmapper;
+    private final String tableName;
 
 
     public RelationalEntityInformation(BeanMappingData<T> mappingData, RelationalTemplate template) {
@@ -38,8 +40,10 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
 
         this.mappingData = mappingData;
 
-        if (mappingData.getTableAnnotation() == null)
+        final Table tableAnnotation = mappingData.getBeanClass().getAnnotation(Table.class);
+        if (tableAnnotation == null)
             throw new IllegalStateException("Bean class " + mappingData.getBeanClass().getCanonicalName() + " has no @Table annotation");
+        tableName = tableAnnotation.value();
 
         // Get the sorted
         TreeMap<Integer, FieldMappingData> pks = new TreeMap<>();
@@ -182,5 +186,9 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
     @SuppressWarnings("unchecked")
     public <S extends T> BeanUnmapper<S> getUpdateUnmapper() {
         return (BeanUnmapper<S>) updateUnmapper;
+    }
+
+    public String getTableName() {
+        return tableName;
     }
 }
