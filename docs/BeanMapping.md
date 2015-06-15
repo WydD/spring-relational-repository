@@ -56,7 +56,7 @@ In order to read and write into fields, the framework detects the best way to se
 * If not, then ```Class.get``` and ```Class.set``` are used and if the field is not public it will try to override permissions. In case of security exception the mapping crashes.
 
 # Mappers
-Each field has accessors but also mappers in order to read and write its value from result sets and into statements. By default the mappers are defined in the [dialect](Dialect.md) and are detailed in the [data mapping section](DataMapping.md). Those mappers are the [BeanAttributeReader](../core/src/main/java/fr/petitl/relational/repository/template/bean/BeanAttributeReader.java). and [BeanAttributeWriter](../core/src/main/java/fr/petitl/relational/repository/template/bean/BeanAttributeWriter.java). 
+Each field has accessors but also mappers in order to read and write its value from result sets and into statements. By default the mappers are defined in the [dialect](Dialect.md) and are detailed in the [data mapping section](DataMapping.md). Those mappers are the [BeanAttributeReader](../core/src/main/java/fr/petitl/relational/repository/template/bean/BeanAttributeReader.java) and [BeanAttributeWriter](../core/src/main/java/fr/petitl/relational/repository/template/bean/BeanAttributeWriter.java). These can be customized at the attribute level using the ```@Column``` annotation.
 
 Aside from per field mapping, each class has a [BeanMapper](../core/src/main/java/fr/petitl/relational/repository/template/bean/BeanMapper.java) which maps an entire tuple (taken from a result set) to a new instance of a class.
 
