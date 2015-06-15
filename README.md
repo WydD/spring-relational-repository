@@ -23,6 +23,7 @@ Here is what you WILL have:
 * Entity mapping
 * Query specific object mappings
 * Custom mappers on each fields
+* Foreign key handling and resolution
 * Dialect handling
 * Query execution helpers
 
@@ -33,7 +34,7 @@ Here is what you can use with it:
 Additionally, this implementation is only available for Java 8. Which makes it more powerful as it can use the Stream 
 implementation and lambdas awesomeness which makes the data management way easier now.
 
-## How to use it
+## Simple stuff
 
 ### Configuration
 Spring Relation Repository uses the straight forward programmatic configuration of spring.
@@ -48,7 +49,7 @@ public class Configuration {
 
     @Bean
     public RelationalTemplate relationalTemplate(DataSource dataSource) {
-        BeanDialect dialect = new GenericBeanDialect();
+        BeanDialect dialect = GenericDialectProvider.mysql();
         return new RelationalTemplate(dataSource, dialect);
     }
 }
@@ -83,8 +84,6 @@ public class Pojo {
 The annotation ```@Table``` specifies which table it must map the domain type to. ```@PK``` specifies the primary key.
  The rest of the fields are assumed to be mapped automatically. If necessary a ```@Column``` annotation can be used to
  specify mappings and names.
-
-TODO: ```@FK```
 
 ### Repositories
 Repositories are handled like any spring data repositories. Use the RelationalRepository interface to have all features.
@@ -178,7 +177,7 @@ Mapping can be customized using the ```@Column``` annotation. Obviously, you can
 
 Declare your custom mapper (called here JsonBMapper) which is able to read and write an attribute.
 ```java
-public class JsonBMapper implements BeanAttributeReader, BeanAttributeWriter {
+public class JsonBMapper implements BeanAttributeMapper {
     // Jackson Mapper
     private static ObjectMapper om = new ObjectMapper();
 
@@ -215,6 +214,6 @@ public class JsonBMapper implements BeanAttributeReader, BeanAttributeWriter {
 
 Now you can use your mapper in your domain objects or in your data transfer objects.
 ```java
-@Column(reader = JsonBMapper.class, writer = JsonBMapper.class)
+@Column(mapper = JsonBMapper.class)
 Map<String, Integer> keywords;
 ```
