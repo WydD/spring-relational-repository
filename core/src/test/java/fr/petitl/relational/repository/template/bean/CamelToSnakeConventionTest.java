@@ -50,5 +50,6 @@ public class CamelToSnakeConventionTest {
         assertEquals("yeah_", CamelToSnakeConvention.camelToSnake("yeah_"));
         assertEquals("_yeah", CamelToSnakeConvention.camelToSnake("_yeah"));
         assertEquals("bit_of_both_2", CamelToSnakeConvention.camelToSnake("bitOfBoth_2"));
+        assertEquals("bit_0_both_2", CamelToSnakeConvention.camelToSnake("bit_0Both_2"));
     }
 }

@@ -40,6 +40,7 @@ public class CamelToSnakeConvention implements NamingConvention {
         char[] c = str.toCharArray();
         List<String> list = new LinkedList<>();
         int tokenStart = 0;
+        // Manage the "_field" case
         if (c[tokenStart] == '_') {
             list.add("");
             tokenStart += 1;
@@ -47,13 +48,18 @@ public class CamelToSnakeConvention implements NamingConvention {
         int currentType = Character.getType(c[tokenStart]);
         for (int pos = tokenStart + 1; pos < c.length; pos++) {
             char currentChar = c[pos];
+            // If a '_' is found
             if (currentChar == '_') {
+                // Split the chain
                 list.add(new String(c, tokenStart, pos - tokenStart));
+                // Skip the current character
                 pos += 1;
                 tokenStart = pos;
-                if (pos >= c.length)
+                if (pos >= c.length) // oob safety
                     break;
+                // Reinit the current type
                 currentType = Character.getType(c[tokenStart]);
+                // In "_hello", tokenStart points to 'h' and the next iteration of pos with be on 'e'
                 continue;
             }
             int type = Character.getType(currentChar);
