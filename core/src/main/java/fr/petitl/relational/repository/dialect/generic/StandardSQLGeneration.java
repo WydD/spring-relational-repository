@@ -128,11 +128,19 @@ public class StandardSQLGeneration<T, ID extends Serializable> implements BeanSQ
 
     @Override
     public String selectAll(int idCount) {
-        String sql = SELECT_STAR + fromTable + WHERE;
+        return SELECT_STAR + multiIdFromWhere(idCount);
+    }
+
+    @Override
+    public String deleteAll(int idCount) {
+        return DELETE + multiIdFromWhere(idCount);
+    }
+
+    private String multiIdFromWhere(int idCount) {
         if (compositeKey) {
-            return sql + compositeIdIn(idCount);
+            return fromTable + WHERE + compositeIdIn(idCount);
         } else {
-            return sql + simpleIdIn(idCount);
+            return fromTable + WHERE + simpleIdIn(idCount);
         }
     }
 

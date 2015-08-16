@@ -4,8 +4,6 @@ import fr.petitl.relational.pg.PGDialectProvider;
 import fr.petitl.relational.pg.gis.model.Location;
 import fr.petitl.relational.pg.gis.repository.LocationRepository;
 import fr.petitl.relational.repository.EnableRelationalRepositories;
-import fr.petitl.relational.repository.dialect.SimpleDialectProvider;
-import fr.petitl.relational.repository.template.RelationalQuery;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import org.junit.Test;
 import org.junit.Assert;

@@ -10,7 +10,7 @@ import fr.petitl.relational.repository.fk.repository.CountryRepository;
 import fr.petitl.relational.repository.fk.repository.EventRepository;
 import fr.petitl.relational.repository.fk.repository.LocationRepository;
 import fr.petitl.relational.repository.repository.FKResolver;
-import fr.petitl.relational.repository.template.RelationalTemplate;
+import fr.petitl.relational.repository.template.TemplateWithCounter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -23,6 +23,7 @@ import org.springframework.test.context.ContextConfiguration;
 import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,7 +48,7 @@ public class FkRepositoryTest extends SpringTest {
     private CountryRepository countryRepository;
 
     @Autowired
-    private RelationalTemplate template;
+    private TemplateWithCounter template;
 
     private FKResolver<Event, EventDTO> eventResolver;
     private Location paris;
@@ -89,7 +90,27 @@ public class FkRepositoryTest extends SpringTest {
     }
 
     @Test
-    public void testUseCase() {
+    public void testSimpleResolve() {
+        long counter = template.getQueryCounter();
+        Map<String, Country> countries = countryRepository.resolveFK(Stream.of(rennes, paris), Location::getCountryId);
+        Assert.assertEquals(counter+1, template.getQueryCounter());
+        Assert.assertEquals(1, countries.size());
+        Assert.assertEquals("France", countries.get("FR").getName());
+
+        counter = template.getQueryCounter();
+        countries = countryRepository.resolveFK(Stream.empty(), Location::getCountryId);
+        // No query must be made if nothing has to be found
+        Assert.assertEquals(counter, template.getQueryCounter());
+        Assert.assertEquals(0, countries.size());
+
+        counter = template.getQueryCounter();
+        countries = countryRepository.resolveFK(Stream.of(new Location(null, "Unknown")), Location::getCountryId);
+        Assert.assertEquals(counter, template.getQueryCounter());
+        Assert.assertEquals(0, countries.size());
+    }
+
+    @Test
+    public void testComplexResolve() {
         Event stunfest = eventRepository.findByName("Stunfest");
         Assert.assertNotNull(stunfest.getId());
         Assert.assertEquals("Stunfest", stunfest.getName());
@@ -137,8 +158,8 @@ public class FkRepositoryTest extends SpringTest {
         }
 
         @Bean
-        public RelationalTemplate relationalTemplate(DataSource dataSource) {
-            return new RelationalTemplate(dataSource, SimpleDialectProvider.h2());
+        public TemplateWithCounter relationalTemplate(DataSource dataSource) {
+            return new TemplateWithCounter(dataSource, SimpleDialectProvider.h2());
         }
     }
 

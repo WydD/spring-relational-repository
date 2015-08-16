@@ -23,4 +23,6 @@ public interface BeanSQLGeneration {
     String update();
 
     String selectAll(int idCount);
+
+    String deleteAll(int idCount);
 }

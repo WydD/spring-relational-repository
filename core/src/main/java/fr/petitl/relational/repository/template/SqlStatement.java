@@ -6,7 +6,7 @@ import java.util.*;
 /**
  *
  */
-public class SqlQuery {
+public class SqlStatement {
 
     public static enum ParameterType {
         NAMED_PARAMETER,
@@ -25,8 +25,8 @@ public class SqlQuery {
     private Map<Integer, List<Integer>> positionParameters;
     private int numberOfArguments;
 
-    protected SqlQuery(ParameterType type, String original, String nativeSql,
-                       Map<String, List<Integer>> namedParameters, Map<Integer, List<Integer>> positionParameters, int numberOfArguments) {
+    protected SqlStatement(ParameterType type, String original, String nativeSql,
+                           Map<String, List<Integer>> namedParameters, Map<Integer, List<Integer>> positionParameters, int numberOfArguments) {
         this.type = type;
         this.original = original;
         this.nativeSql = nativeSql;
@@ -51,7 +51,7 @@ public class SqlQuery {
             if (position > this.numberOfArguments)
                 throw new IllegalArgumentException("Unknown position parameter [" + position + "]");
 
-            return Arrays.asList(position);
+            return Collections.singletonList(position);
         }
         if (type == ParameterType.POSITIONAL) {
             List<Integer> result = positionParameters.get(position);
@@ -78,7 +78,7 @@ public class SqlQuery {
         return numberOfArguments;
     }
 
-    public static SqlQuery parse(String sql) throws SQLSyntaxErrorException {
+    public static SqlStatement parse(String sql) throws SQLSyntaxErrorException {
         int length = sql.length();
 
         boolean inQuote = false;
@@ -162,7 +162,7 @@ public class SqlQuery {
             }
             builder.append(c);
         }
-        return new SqlQuery(type, sql, builder.toString(), namedParameters, positionParameters, parameterCount - 1);
+        return new SqlStatement(type, sql, builder.toString(), namedParameters, positionParameters, parameterCount - 1);
     }
 
     protected static String extract(int start, int length, String sql) {

@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 
 import fr.petitl.relational.repository.repository.model.MainGenerated;
 import fr.petitl.relational.repository.template.RelationalTemplate;
+import fr.petitl.relational.repository.template.TemplateWithCounter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,10 +25,12 @@ import static org.junit.Assert.*;
 public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     private SimpleRelationalRepository<MainGenerated, Integer> repository;
+    private TemplateWithCounter template;
 
     @Before
     public void init() {
         repository = simpleBuild();
+        template = (TemplateWithCounter) repository.getTemplate();
     }
 
     @Test
@@ -51,7 +54,10 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testDelete2() throws Exception {
+        long queryCounter = template.getQueryCounter();
         repository.delete(Arrays.asList(new MainGenerated(2, null, null), new MainGenerated(3, null, null)));
+        // DO NOT DO A FOREACH DELETE !
+        Assert.assertEquals(queryCounter+1, template.getQueryCounter());
         repository.delete(Collections.singletonList(new MainGenerated(4, null, null)));
         verifyDeleted(repository, 1, 2, 3);
     }
@@ -92,7 +98,7 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testFindAllIndexed() throws Exception {
-        Map<Integer, MainGenerated> all = repository.resolveAll(Stream.of(1, 3), repository.asIndex());
+        Map<Integer, MainGenerated> all = repository.resolve(Stream.of(1, 3), repository.asIndex());
         verifyPojo1(all.get(1));
         verifyPojo3(all.get(3));
         assertEquals(2, all.size());

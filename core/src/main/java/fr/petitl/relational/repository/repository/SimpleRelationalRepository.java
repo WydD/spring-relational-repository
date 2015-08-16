@@ -3,9 +3,7 @@ package fr.petitl.relational.repository.repository;
 import fr.petitl.relational.repository.dialect.BeanSQLGeneration;
 import fr.petitl.relational.repository.dialect.PagingGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
-import fr.petitl.relational.repository.template.RelationalQuery;
-import fr.petitl.relational.repository.template.RelationalTemplate;
-import fr.petitl.relational.repository.template.RowMapper;
+import fr.petitl.relational.repository.template.*;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Page;
@@ -14,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -47,17 +46,17 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         this.entityInformation = entityInformation;
     }
 
-    public <E> RelationalQuery<E> query(String sql, RowMapper<E> mapper) {
-        return new RelationalQuery<>(sql, template, mapper);
+    public <E> SelectQuery<E> query(String sql, RowMapper<E> mapper) {
+        return new SelectQuery<>(sql, template, mapper);
     }
 
-    private <E> RelationalQuery<E> queryById(String sql, ID id, RowMapper<E> mapper) {
-        RelationalQuery<E> query = query(sql, mapper);
+    private <E> SelectQuery<E> queryById(String sql, ID id, RowMapper<E> mapper) {
+        SelectQuery<E> query = query(sql, mapper);
         setId(id, query, 1);
         return query;
     }
 
-    private <E> void setId(ID id, RelationalQuery<E> query, int base) {
+    private void setId(ID id, AbstractQuery query, int base) {
         query.addPrepareStep(pse -> entityInformation.getIdUnmapper().prepare(pse, id, base));
     }
 
@@ -68,19 +67,22 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     @Override
     public void delete(ID id) {
-        queryById(sql.deleteById(), id, null).update();
+        UpdateQuery query = template.createQuery(sql.deleteById());
+        setId(id, query, 1);
+        query.execute();
     }
 
     @Override
-    public void delete(Iterable<? extends T> entities) {
-        for (T t : entities) {
-            delete(t);
-        }
+    public int deleteByIds(Stream<ID> idsStream) {
+        Set<ID> ids = idsStream.collect(Collectors.toSet());
+        UpdateQuery query = template.createQuery(sql.deleteAll(ids.size()));
+        setIds(ids, query);
+        return query.execute();
     }
 
     @Override
     public void deleteAll() {
-        query(sql.delete(), null).update();
+        template.createQuery(sql.delete()).execute();
     }
 
     @Override
@@ -155,16 +157,23 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     @Override
-    public <F> F resolveAll(Stream<ID> ids, Function<Stream<T>, F> apply) {
+    public <F> F resolve(Stream<ID> ids, Function<Stream<T>, F> apply) {
         Set<ID> idList = ids.collect(Collectors.toSet());
+        if (idList.isEmpty()) {
+            return apply.apply(Stream.empty());
+        }
+        SelectQuery<T> query = query(sql.selectAll(idList.size()), mappingData.getMapper());
+        setIds(idList, query);
+        return query.fetch(apply);
+    }
+
+    protected void setIds(Set<ID> idList, AbstractQuery query) {
         int pkSize = entityInformation.getPkFields().size();
-        RelationalQuery<T> query = query(sql.selectAll(idList.size()), mappingData.getMapper());
         int c = 1;
         for (ID id : idList) {
             setId(id, query, c);
             c += pkSize;
         }
-        return query.fetch(apply);
     }
 
     @Override

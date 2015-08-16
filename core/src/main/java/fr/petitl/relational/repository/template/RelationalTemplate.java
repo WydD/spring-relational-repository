@@ -1,19 +1,14 @@
 package fr.petitl.relational.repository.template;
 
 import javax.sql.DataSource;
-import java.io.Serializable;
 import java.sql.*;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import fr.petitl.relational.repository.dialect.BeanDialect;
-import fr.petitl.relational.repository.repository.RelationalRepository;
-import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.CamelToSnakeConvention;
 import fr.petitl.relational.repository.template.bean.MappingFactory;
@@ -216,12 +211,16 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         }, con -> con.prepareStatement(sql));
     }
 
-    public <E> RelationalQuery<E> createQuery(String sql, RowMapper<E> mapper) {
-        return new RelationalQuery<>(sql, this, mapper);
+    public UpdateQuery createQuery(String sql) {
+        return new UpdateQuery(sql, this);
     }
 
-    public <E> RelationalQuery<E> createQuery(String sql, Class<E> mappingType) {
-        return new RelationalQuery<>(sql, this, getMappingData(mappingType).getMapper());
+    public <E> SelectQuery<E> createQuery(String sql, RowMapper<E> mapper) {
+        return new SelectQuery<>(sql, this, mapper);
+    }
+
+    public <E> SelectQuery<E> createQuery(String sql, Class<E> mappingType) {
+        return new SelectQuery<>(sql, this, getMappingData(mappingType).getMapper());
     }
 
     @Override
