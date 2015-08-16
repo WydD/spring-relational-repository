@@ -43,7 +43,7 @@ public class BeanMapper<T> implements RowMapper<T> {
 
             FieldMappingData fieldData = mappingData.fieldForColumn(name);
 
-            Object object = fieldData.attributeReader.readAttribute(rs, i, fieldData.field, instance);
+            Object object = fieldData.attributeReader.readAttribute(rs, i, fieldData.field);
             fieldData.writeMethod.accept(instance, object);
         }
 

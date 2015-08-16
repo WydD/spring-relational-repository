@@ -15,7 +15,7 @@ public class SpringJDBCAttributeMapper implements BeanAttributeMapper {
         StatementCreatorUtils.setParameterValue(ps, column, sqlType, o);
     }
 
-    public Object readAttribute(ResultSet rs, int column, Field sourceField, Object instance) throws SQLException {
+    public Object readAttribute(ResultSet rs, int column, Field sourceField) throws SQLException {
         return JdbcUtils.getResultSetValue(rs, column, sourceField.getType());
     }
 }

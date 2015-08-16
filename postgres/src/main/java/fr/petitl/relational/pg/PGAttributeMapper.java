@@ -59,7 +59,7 @@ public class PGAttributeMapper extends SpringJDBCAttributeMapper {
     }
 
     @Override
-    public Object readAttribute(ResultSet rs, int column, Field targetField, Object instance) throws SQLException {
+    public Object readAttribute(ResultSet rs, int column, Field targetField) throws SQLException {
         // Manage the json type
         if (targetField.getAnnotation(JsonField.class) != null) {
             if (rs.getString(column) == null)
@@ -84,6 +84,6 @@ public class PGAttributeMapper extends SpringJDBCAttributeMapper {
             return rs.getObject(column);
         }
         // Standard is managed by the standard
-        return super.readAttribute(rs, column, targetField, instance);
+        return super.readAttribute(rs, column, targetField);
     }
 }

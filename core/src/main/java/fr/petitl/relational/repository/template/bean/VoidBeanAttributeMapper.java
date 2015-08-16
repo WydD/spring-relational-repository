@@ -19,7 +19,7 @@ public class VoidBeanAttributeMapper implements BeanAttributeMapper {
     }
 
     @Override
-    public Object readAttribute(ResultSet rs, int column, Field sourceField, Object instance) throws SQLException {
+    public Object readAttribute(ResultSet rs, int column, Field sourceField) throws SQLException {
         throw new IllegalStateException("Nothing to see here... it should be replaced by the dialect");
     }
 }

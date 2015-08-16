@@ -22,9 +22,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import javax.sql.DataSource;
 import java.sql.SQLException;
 
-/**
- * Created by loic on 12/06/15.
- */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = SimpleIT.BaseConfiguration.class)
 public class SimpleIT {
@@ -44,9 +41,9 @@ public class SimpleIT {
         @Bean
         public RelationalTemplate relationalTemplate(DataSource dataSource) {
             final RelationalTemplate template = new RelationalTemplate(dataSource, PGDialectProvider.get());
-            new RelationalQuery<>(Location.DROP, template, null).update();
-            new RelationalQuery<>(Location.CREATE, template, null).update();
-            new RelationalQuery<>(Location.INSERT, template, null).update();
+            template.executeUpdate(Location.DROP);
+            template.executeUpdate(Location.CREATE);
+            template.executeUpdate(Location.INSERT);
             return template;
         }
     }
