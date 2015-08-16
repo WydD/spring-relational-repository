@@ -98,7 +98,7 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testFindAllIndexed() throws Exception {
-        Map<Integer, MainGenerated> all = repository.resolve(Stream.of(1, 3), repository.asIndex());
+        Map<Integer, MainGenerated> all = repository.findAll(Stream.of(1, 3), repository.asIndex());
         verifyPojo1(all.get(1));
         verifyPojo3(all.get(3));
         assertEquals(2, all.size());

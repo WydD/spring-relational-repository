@@ -1,5 +1,5 @@
 # TL;DR
-In this framework, objects are a representation of a tuple in the Java world, the only thing you need to take care of is how to map columns to fields. Conversion between snakeCase for the Java beans and camel_case for the database is by default and foreign keys adds implicitly \_id at the end. Custom behaviour is customized with @Column. Accessing fields is made using the standard ways.
+In this framework, objects are a representation of a tuple in the Java world, the only thing you need to take care of is how to map columns to fields. Conversion between snakeCase for the Java beans and camel_case for the database is by default. Custom behaviour is customized with @Column. Accessing fields is made using the standard ways.
 
 # Naming conventions
 The naming convention is the default behaviour of translating a bean property name in a column name. This behaviour is driven by an implementation of the interface [NamingConvention](../core/src/main/java/fr/petitl/relational/repository/template/bean/NamingConvention.java).                                                     
@@ -19,23 +19,6 @@ Some examples:
 | created_by   | created_by     |
 
 As you can see, the conversion is done as close as possible to the human interpretation.
-
-### Foreign Keys
-A foreign key field is a field that leads to an other table primary key. Therefore, in classical database design, a postfix ```_id``` is often used. To do this the most efficient way without hurting too much the field naming, this postfix is automatically added if the field is detected as a foreign key handle (see [the foreign key documentation](ForeignKey)) AND if the generated column name does not already have the postfix at the end.
-
-This way you would have the following mapping:
-```java
-class A {
-    // Maps to id
-    int id;
-    
-    // Maps to first_name
-    String firstName;
-    
-    // Maps to account_id
-    FK<Integer, Account> account;
-}
-```
 
 ## Name override
 Any column name can be overridden with the annotation ```@Column```. This will override all other behaviour from there (like postfix shenanigans). 

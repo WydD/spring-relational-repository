@@ -157,7 +157,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     @Override
-    public <F> F resolve(Stream<ID> ids, Function<Stream<T>, F> apply) {
+    public <F> F findAll(Stream<ID> ids, Function<Stream<T>, F> apply) {
         Set<ID> idList = ids.collect(Collectors.toSet());
         if (idList.isEmpty()) {
             return apply.apply(Stream.empty());

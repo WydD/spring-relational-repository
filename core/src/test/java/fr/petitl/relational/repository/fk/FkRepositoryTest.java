@@ -56,7 +56,8 @@ public class FkRepositoryTest extends SpringTest {
     @PostConstruct
     private void init() {
         eventResolver = FKResolver.of(EventDTO::new)
-                .add(it -> new Object[]{it.getCountryId(), it.getLocationId()}, locationRepository, (dto, location) -> dto.location = new LocationDTO(location))
+                .add(it -> it.getLocationId() != null ? new Object[]{it.getCountryId(), it.getLocationId()} : null,
+                        locationRepository, (dto, location) -> dto.location = new LocationDTO(location))
                 .add(Event::getCountryId, countryRepository, (dto, country) -> dto.location.country = country)
                 .build();
     }
@@ -120,7 +121,10 @@ public class FkRepositoryTest extends SpringTest {
         // Which has this specific ID
         Assert.assertEquals(rennes.getId(), stunfest.getLocationId());
 
+        long queryCounter = template.getQueryCounter();
         EventDTO resolved = eventResolver.resolve(Stream.of(stunfest)).findAny().get();
+        // Two queries must have been issued
+        Assert.assertEquals(queryCounter+2, template.getQueryCounter());
 
         // Entities MUST has been resolved
         Assert.assertNotNull(resolved.location);
@@ -135,11 +139,17 @@ public class FkRepositoryTest extends SpringTest {
         other.setId(123);
         // we don't need to store the data to resolve it, that's the beauty :)
 
+        queryCounter = template.getQueryCounter();
         resolved = eventResolver.resolve(Stream.of(other)).findAny().get();
+        // No queries must have been issued (only null entries)
+        Assert.assertEquals(queryCounter, template.getQueryCounter());
         // Must be null
         Assert.assertNull(resolved.location);
 
+        queryCounter = template.getQueryCounter();
         List<EventDTO> all = eventResolver.resolve(Stream.of(stunfest, other, stunfest), 2).collect(Collectors.toList());
+        // Two batches of 2 (and each one contains something useful)
+        Assert.assertEquals(queryCounter + 4, template.getQueryCounter());
         Assert.assertEquals(3, all.size());
         Assert.assertEquals(stunfest.getId(), all.get(0).id);
         Assert.assertEquals(stunfest.getLocationId(), all.get(0).location.id);

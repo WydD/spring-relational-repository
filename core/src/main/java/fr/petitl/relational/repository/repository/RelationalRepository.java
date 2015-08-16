@@ -16,7 +16,7 @@ import java.util.stream.StreamSupport;
  */
 @NoRepositoryBean
 public interface RelationalRepository<T, ID extends Serializable> extends PagingAndSortingRepository<T, ID> {
-    <F> F resolve(Stream<ID> ids, Function<Stream<T>, F> apply);
+    <F> F findAll(Stream<ID> ids, Function<Stream<T>, F> apply);
 
     <F> F fetchAll(Function<Stream<T>, F> apply);
 
@@ -31,7 +31,7 @@ public interface RelationalRepository<T, ID extends Serializable> extends Paging
     Function<T, ID> pkGetter();
 
     default <F, G> G resolveFK(Stream<F> stream, Function<F, ID> fkGetter, Function<Stream<T>, G> apply) {
-        return resolve(stream.map(fkGetter).filter(it -> it != null), apply);
+        return findAll(stream.map(fkGetter).filter(it -> it != null), apply);
     }
 
     default <F> Map<ID, T> resolveFK(Stream<F> stream, Function<F, ID> fkGetter) {
@@ -59,6 +59,6 @@ public interface RelationalRepository<T, ID extends Serializable> extends Paging
     }
 
     default List<T> findAll(Iterable<ID> ids) {
-        return resolve(StreamSupport.stream(ids.spliterator(), false), it -> it.collect(Collectors.toList()));
+        return findAll(StreamSupport.stream(ids.spliterator(), false), it -> it.collect(Collectors.toList()));
     }
 }

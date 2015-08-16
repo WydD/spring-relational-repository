@@ -3,10 +3,7 @@ package fr.petitl.relational.repository.repository;
 import fr.petitl.relational.repository.util.WindowedSpliterator;
 
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -19,6 +16,10 @@ public class FKResolver<E, F> {
 
     public static <E, F> Builder<E, F> of(Function<E, F> create) {
         return new Builder<>(create);
+    }
+
+    public F resolve(E entry) {
+        return doResolve(Collections.singletonList(entry)).findFirst().get();
     }
 
     public Stream<F> resolve(Stream<E> stream) {
@@ -78,7 +79,11 @@ public class FKResolver<E, F> {
 
         public void set(E e, F f) {
             Object id = fkGetter.apply(e);
-            if (id == null) return;
+            if (id == null) {
+                if (setIfNull)
+                    fkSetter.accept(f, null);
+                return;
+            }
             T result = resolved.get(ensureId(id));
             if (result == null) {
                 if (setIfNull)

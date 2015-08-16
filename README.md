@@ -23,7 +23,7 @@ Here is what you WILL have:
 * Entity mapping
 * Query specific object mappings
 * Custom mappers on each fields
-* Foreign key handling and resolution
+* Foreign key resolution tools
 * Dialect handling
 * Query execution helpers
 
@@ -71,7 +71,7 @@ public class Pojo {
 
     private String name;
 
-    // This is mapped to the column `created_name`
+    // This is mapped to the column `created_date`
     private Date createdDate;
 
     public Pojo() {
