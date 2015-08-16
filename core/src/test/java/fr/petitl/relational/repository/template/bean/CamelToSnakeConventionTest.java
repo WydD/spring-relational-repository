@@ -17,27 +17,14 @@ public class CamelToSnakeConventionTest {
         public String dataFCOther;
     }
 
-    public String test(Field field, boolean hasFK) {
-        return camelToSnakeConvention.generateDefaultColumnName(field, hasFK);
+    public String test(Field field) {
+        return camelToSnakeConvention.generateDefaultColumnName(field);
     }
 
     @Test
     public void testCamelCase() throws NoSuchFieldException {
-        assertEquals("created_date", test(TestCamelCase.class.getField("createdDate"), false));
-        assertEquals("data_fc_other", test(TestCamelCase.class.getField("dataFCOther"), false));
-    }
-
-    public class TestId {
-        public String createdDate;
-        public String dataFCId;
-        public String superStuffId;
-    }
-
-    @Test
-    public void testId() throws NoSuchFieldException {
-        assertEquals("created_date_id", test(TestId.class.getField("createdDate"), true));
-        assertEquals("data_fc_id", test(TestId.class.getField("dataFCId"), true));
-        assertEquals("super_stuff_id", test(TestId.class.getField("superStuffId"), true));
+        assertEquals("created_date", test(TestCamelCase.class.getField("createdDate")));
+        assertEquals("data_fc_other", test(TestCamelCase.class.getField("dataFCOther")));
     }
 
     @Test

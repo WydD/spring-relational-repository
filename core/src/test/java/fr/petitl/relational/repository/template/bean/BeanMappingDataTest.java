@@ -17,6 +17,7 @@ import static org.junit.Assert.fail;
 public class BeanMappingDataTest {
 
     public static final BeanDialect DIALECT = SimpleDialectProvider.h2();
+    public static final RelationalTemplate DUMMY_TEMPLATE = new RelationalTemplate(new DelegatingDataSource(), DIALECT);
 
     public static class PublicAttributeMapping {
         private int id;
@@ -72,7 +73,7 @@ public class BeanMappingDataTest {
 
     @Test
     public void testMethodAttributeMapping() {
-        BeanMappingData<MethodAttributeMapping> mappingData = new BeanMappingData<>(MethodAttributeMapping.class, DIALECT, null);
+        BeanMappingData<MethodAttributeMapping> mappingData = new BeanMappingData<>(MethodAttributeMapping.class, DIALECT, DUMMY_TEMPLATE);
         try {
             mappingData.fieldForColumn("createddate");
             fail("Found createddate which is not supposed to happen");

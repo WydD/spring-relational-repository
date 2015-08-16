@@ -80,7 +80,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
             };
             final FieldMappingData pkField = pkFields.get(0);
             //noinspection unchecked
-            idMapper = rs -> (ID) pkField.attributeReader.readAttribute(rs, 1, pkField.field);
+            idMapper = rs -> (ID) pkField.attributeReader.readAttribute(rs, 1, pkField.field, null);
             idUnmapper = (pse, id, offset) -> pkField.attributeWriter.writeAttribute(pse, offset, id, pkField.field);
         } else {
             final PKClass annotation = mappingData.getBeanClass().getAnnotation(PKClass.class);
@@ -118,23 +118,18 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
                     Object[] result = new Object[pkFields.size()];
                     for (int i = 0; i < result.length; i++) {
                         FieldMappingData fieldData = pkFields.get(i);
-                        result[i] = fieldData.attributeReader.readAttribute(rs, i + 1, fieldData.field);
+                        result[i] = fieldData.attributeReader.readAttribute(rs, i + 1, fieldData.field, null);
                     }
+                    //noinspection unchecked
                     return (ID) result;
                 };
-                idUnmapper = (pse, id, offset) -> {
-                    Object[] objects = (Object[]) id;
-                    for (int i = 0; i < pkFields.size(); i++) {
-                        FieldMappingData fieldData = pkFields.get(i);
-                        fieldData.attributeWriter.writeAttribute(pse, i + offset, objects[i], fieldData.field);
-                    }
-                };
+                idUnmapper = getObjectArrayUnmapper(pkFields);
             }
         }
         if (generatedPK) {
             final FieldMappingData finalGenerated = generated;
             idSetter = (T instance) -> (ResultSet rs) -> {
-                Object id = finalGenerated.attributeReader.readAttribute(rs, 1, finalGenerated.field);
+                Object id = finalGenerated.attributeReader.readAttribute(rs, 1, finalGenerated.field, instance);
                 finalGenerated.writeMethod.accept(instance, id);
                 return instance;
             };
@@ -145,6 +140,16 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         list.addAll(pkFields);
 
         updateUnmapper = new BeanUnmapper<>(list);
+    }
+
+    public static <ID> StatementMapper<ID> getObjectArrayUnmapper(List<FieldMappingData> pkFields) {
+        return (pse, id, offset) -> {
+            Object[] objects = (Object[]) id;
+            for (int i = 0; i < pkFields.size(); i++) {
+                FieldMappingData fieldData = pkFields.get(i);
+                fieldData.attributeWriter.writeAttribute(pse, i + offset, objects[i], fieldData.field);
+            }
+        };
     }
 
     public List<FieldMappingData> getPkFields() {

@@ -6,5 +6,5 @@ import fr.petitl.relational.repository.repository.RelationalRepository;
 /**
  *
  */
-public interface LocationRepository extends RelationalRepository<Location, Integer> {
+public interface LocationRepository extends RelationalRepository<Location, Object[]> {
 }

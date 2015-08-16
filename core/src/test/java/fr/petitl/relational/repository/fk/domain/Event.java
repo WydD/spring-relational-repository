@@ -2,7 +2,6 @@ package fr.petitl.relational.repository.fk.domain;
 
 import fr.petitl.relational.repository.annotation.PK;
 import fr.petitl.relational.repository.annotation.Table;
-import fr.petitl.relational.repository.repository.FK;
 
 /**
  *
@@ -14,21 +13,19 @@ public class Event {
 
     private String name;
 
-    /**
-     * This foreign key references a Location instance using the column "location_id"
-     * (having `_id` is implicit by default). (see db-schema.sql in the fk package)
-     *
-     * The object resolution is made outside the main query using FK::resolve
-     * To do so, a repository wiring is done to get the repository able to resolve the operation Integer -> Location.
-     */
-    private FK<Integer, Location> location;
+    private String countryId;
+
+    private Integer locationId;
 
     public Event() {
     }
 
-    public Event(String name, FK<Integer, Location> location) {
+    public Event(String name, Location location) {
         this.name = name;
-        this.location = location;
+        if (location != null) {
+            this.countryId = location.getCountryId();
+            this.locationId = location.getId();
+        }
     }
 
     public Integer getId() {
@@ -47,11 +44,19 @@ public class Event {
         this.name = name;
     }
 
-    public FK<Integer, Location> getLocation() {
-        return location;
+    public Integer getLocationId() {
+        return locationId;
     }
 
-    public void setLocation(FK<Integer, Location> location) {
-        this.location = location;
+    public void setLocationId(Integer locationId) {
+        this.locationId = locationId;
+    }
+
+    public String getCountryId() {
+        return countryId;
+    }
+
+    public void setCountryId(String countryId) {
+        this.countryId = countryId;
     }
 }

@@ -10,25 +10,9 @@ import java.util.stream.Collectors;
  */
 public class CamelToSnakeConvention implements NamingConvention {
 
-    private String fkPostfix;
-
-    public CamelToSnakeConvention(String fkPostfix) {
-        this.fkPostfix = fkPostfix;
-    }
-
-    public CamelToSnakeConvention() {
-        this("_id");
-    }
-
-    public String generateDefaultColumnName(Field field, boolean hasFK) {
+    public String generateDefaultColumnName(Field field) {
         String fieldName = field.getName();
-        String colName = camelToSnake(fieldName);
-        if (fkPostfix != null) {
-            if (hasFK && !colName.endsWith(fkPostfix)) { // createdDate
-                colName += fkPostfix;
-            }
-        }
-        return colName;
+        return camelToSnake(fieldName);
     }
 
     /**

@@ -168,6 +168,10 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         }, con -> con.prepareStatement(sql));
     }
 
+    public int executeUpdate(String sql) {
+        return executeUpdate(sql, null, null);
+    }
+
     public <E> Stream<E> executeStreamInsertGenerated(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
         return executeDontClose(statement -> {
             Connection connection = statement.getConnection();
@@ -220,31 +224,12 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         return new RelationalQuery<>(sql, this, getMappingData(mappingType).getMapper());
     }
 
-    protected Map<String, RelationalRepository<?,?>> repositoriesByType = new HashMap<>();
-    public <T, ID extends Serializable> void registerRepository(RelationalEntityInformation<T, ID> entityInformation, RelationalRepository<T, ID> repository) {
-        String serial =  entityInformation.getIdType().getName() + ":" + entityInformation.getJavaType().getName();
-        RelationalRepository<?, ?> old = repositoriesByType.put(serial, repository);
-        if (old != null) {
-            throw new IllegalStateException("Cannot register repository "+repository.getClass().getName()+" there is already another repository for this type: "+old.getClass().getName());
-        }
-    }
-
-    public <T, ID extends Serializable> RelationalRepository<T, ID> getRepositoryForType(Class<T> type, Class<T> idType) {
-        String serial = idType.getName() + ":" + type.getName();
-        //noinspection unchecked
-        RelationalRepository<T, ID> repository = (RelationalRepository<T, ID>) repositoriesByType.get(serial);
-        if (repository == null) {
-            throw new IllegalArgumentException("No repository has been declared for types "+serial);
-        }
-        return repository;
-    }
-
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         try {
             transactionTemplate = applicationContext.getBean(TransactionTemplate.class);
         } catch (NoSuchBeanDefinitionException e) {
-            log.warn("No transaction template has been declared! Creating one based using the data source.");
+            log.warn("No transaction template has been declared! Creating one based on the data source.");
             transactionTemplate = new TransactionTemplate(new DataSourceTransactionManager(getDataSource()));
         }
     }
@@ -258,7 +243,7 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
     }
 
     protected interface JdbcCallback<E> {
-        public E execute() throws SQLException;
+        E execute() throws SQLException;
     }
 
     protected <E> E translateExceptions(String task, String sql, JdbcCallback<E> callback) {

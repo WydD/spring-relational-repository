@@ -6,5 +6,5 @@ import java.lang.reflect.Field;
  *
  */
 public interface NamingConvention {
-    String generateDefaultColumnName(Field field, boolean isFK);
+    String generateDefaultColumnName(Field field);
 }

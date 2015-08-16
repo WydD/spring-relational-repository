@@ -1,14 +1,15 @@
 package fr.petitl.relational.repository.fk;
 
-import javax.sql.DataSource;
-
 import fr.petitl.relational.repository.EnableRelationalRepositories;
 import fr.petitl.relational.repository.SpringTest;
 import fr.petitl.relational.repository.dialect.SimpleDialectProvider;
+import fr.petitl.relational.repository.fk.domain.Country;
 import fr.petitl.relational.repository.fk.domain.Event;
 import fr.petitl.relational.repository.fk.domain.Location;
+import fr.petitl.relational.repository.fk.repository.CountryRepository;
 import fr.petitl.relational.repository.fk.repository.EventRepository;
 import fr.petitl.relational.repository.fk.repository.LocationRepository;
+import fr.petitl.relational.repository.repository.FKResolver;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import org.junit.After;
 import org.junit.Assert;
@@ -18,6 +19,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
+
+import javax.annotation.PostConstruct;
+import javax.sql.DataSource;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Provides a simple case of foreign key integration in spring relational repository.
@@ -36,19 +43,37 @@ public class FkRepositoryTest extends SpringTest {
     @Autowired
     private LocationRepository locationRepository;
 
+    @Autowired
+    private CountryRepository countryRepository;
+
+    @Autowired
+    private RelationalTemplate template;
+
+    private FKResolver<Event, EventDTO> eventResolver;
+    private Location paris;
+
+    @PostConstruct
+    private void init() {
+        eventResolver = FKResolver.of(EventDTO::new)
+                .add(it -> new Object[]{it.getCountryId(), it.getLocationId()}, locationRepository, (dto, location) -> dto.location = new LocationDTO(location))
+                .add(Event::getCountryId, countryRepository, (dto, country) -> dto.location.country = country)
+                .build();
+    }
+
     @Before
     public void before() {
-        rennes = locationRepository.save(new Location("Rennes"));
-        Assert.assertNotNull(rennes.getId());
-        // Rennes is now a valid location
+        template.getTransactionTemplate().execute(tx -> {
+            template.executeUpdate("SET REFERENTIAL_INTEGRITY FALSE"); // No deferred check on H2
+            rennes = locationRepository.save(new Location("FR", "Rennes"));
+            paris = locationRepository.save(new Location("FR", "Paris"));
+            Assert.assertNotNull(rennes.getId());
+            Assert.assertNotNull(paris.getId());
+            // Rennes is now a valid location
+            countryRepository.save(new Country("FR", "France", paris.getId()));
+            return null;
+        });
 
-        // Create the "stunfest" event which contains a foreign declared using the location repository
-        // (which knows the ID type and resolution strategies)
-        final Event stunfest = new Event("Stunfest", locationRepository.fk(rennes));
-        // locationRepository.fid(rennes.getId()) works as well to create the fk to rennes
-        // ... but this one has a resolved entity because it was given by the user
-        Assert.assertTrue(stunfest.getLocation().isResolved());
-
+        final Event stunfest = new Event("Stunfest", rennes);
         // and now we save
         eventRepository.save(stunfest);
     }
@@ -56,35 +81,51 @@ public class FkRepositoryTest extends SpringTest {
     @After
     public void after() {
         rennes = null;
+        paris = null;
         // Order is important here as event references location
         eventRepository.deleteAll();
+        countryRepository.deleteAll();
         locationRepository.deleteAll();
     }
 
     @Test
-    public void testSimpleCase() {
+    public void testUseCase() {
         Event stunfest = eventRepository.findByName("Stunfest");
         Assert.assertNotNull(stunfest.getId());
         Assert.assertEquals("Stunfest", stunfest.getName());
 
         // Event.Location is a reference a Location instance
-        Assert.assertNotNull(stunfest.getLocation());
+        Assert.assertNotNull(stunfest.getLocationId());
         // Which has this specific ID
-        Assert.assertEquals(rennes.getId(), stunfest.getLocation().getId());
-        // But we don't know the content
-        Assert.assertFalse(stunfest.getLocation().isResolved());
+        Assert.assertEquals(rennes.getId(), stunfest.getLocationId());
 
-        // Perform the explicit DB resolve
-        final Location resolved = stunfest.getLocation().resolve();
+        EventDTO resolved = eventResolver.resolve(Stream.of(stunfest)).findAny().get();
+
+        // Entities MUST has been resolved
+        Assert.assertNotNull(resolved.location);
+        Assert.assertNotNull(resolved.location.country);
 
         // Now we know
-        Assert.assertEquals("Rennes", resolved.getName());
-        Assert.assertTrue(stunfest.getLocation().isResolved());
+        Assert.assertEquals("Rennes", resolved.location.name);
+        Assert.assertEquals("France", resolved.location.country.getName());
+        Assert.assertEquals(paris.getId(), resolved.location.country.getCapitalId());
 
-        // A second resolved is a cache
-        Assert.assertTrue(resolved == stunfest.getLocation().resolve());
-        // Which is not the case for a forced one
-        Assert.assertTrue(resolved != stunfest.getLocation().forceResolve());
+        Event other = new Event("Unknown stuff", null);
+        other.setId(123);
+        // we don't need to store the data to resolve it, that's the beauty :)
+
+        resolved = eventResolver.resolve(Stream.of(other)).findAny().get();
+        // Must be null
+        Assert.assertNull(resolved.location);
+
+        List<EventDTO> all = eventResolver.resolve(Stream.of(stunfest, other, stunfest), 2).collect(Collectors.toList());
+        Assert.assertEquals(3, all.size());
+        Assert.assertEquals(stunfest.getId(), all.get(0).id);
+        Assert.assertEquals(stunfest.getLocationId(), all.get(0).location.id);
+        Assert.assertEquals(other.getId(), all.get(1).id);
+        Assert.assertNull(all.get(1).location);
+        Assert.assertEquals(stunfest.getId(), all.get(2).id);
+        Assert.assertEquals(stunfest.getLocationId(), all.get(2).location.id);
     }
 
     @Configuration
@@ -101,4 +142,29 @@ public class FkRepositoryTest extends SpringTest {
         }
     }
 
+    private class EventDTO {
+        public Integer id;
+
+        public String name;
+
+        public LocationDTO location;
+
+        public EventDTO(Event event) {
+            id = event.getId();
+            name = event.getName();
+        }
+    }
+
+    private class LocationDTO {
+        public Country country;
+
+        public Integer id;
+
+        public String name;
+
+        public LocationDTO(Location location) {
+            id = location.getId();
+            name = location.getName();
+        }
+    }
 }

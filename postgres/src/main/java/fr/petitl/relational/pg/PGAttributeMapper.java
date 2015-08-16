@@ -16,9 +16,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/**
- * Created by loic on 11/06/15.
- */
 public class PGAttributeMapper extends SpringJDBCAttributeMapper {
 
     // Jackson Mapper
@@ -62,7 +59,7 @@ public class PGAttributeMapper extends SpringJDBCAttributeMapper {
     }
 
     @Override
-    public Object readAttribute(ResultSet rs, int column, Field targetField) throws SQLException {
+    public Object readAttribute(ResultSet rs, int column, Field targetField, Object instance) throws SQLException {
         // Manage the json type
         if (targetField.getAnnotation(JsonField.class) != null) {
             if (rs.getString(column) == null)
@@ -87,6 +84,6 @@ public class PGAttributeMapper extends SpringJDBCAttributeMapper {
             return rs.getObject(column);
         }
         // Standard is managed by the standard
-        return super.readAttribute(rs, column, targetField);
+        return super.readAttribute(rs, column, targetField, instance);
     }
 }

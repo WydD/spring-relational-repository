@@ -27,8 +27,8 @@ public class RelationalQuery<E> {
     private Function<Object, ColumnMapper> defaultSetter;
     private Pageable pageable;
 
-    public static interface PrepareStep {
-        public void prepareStatement(PreparedStatement ps) throws SQLException;
+    public interface PrepareStep {
+        void prepareStatement(PreparedStatement ps) throws SQLException;
     }
 
     protected List<PrepareStep> toPrepare = new LinkedList<>();

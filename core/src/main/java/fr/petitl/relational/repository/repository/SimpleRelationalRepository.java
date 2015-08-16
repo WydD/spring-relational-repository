@@ -1,13 +1,5 @@
 package fr.petitl.relational.repository.repository;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
 import fr.petitl.relational.repository.dialect.BeanSQLGeneration;
 import fr.petitl.relational.repository.dialect.PagingGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
@@ -15,12 +7,19 @@ import fr.petitl.relational.repository.template.RelationalQuery;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
-import fr.petitl.relational.repository.template.bean.FieldMappingData;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class SimpleRelationalRepository<T, ID extends Serializable> implements RelationalRepository<T, ID> {
     private static final RowMapper<Long> COUNT_MAPPER = it -> it.getLong(1);
@@ -39,7 +38,6 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         this.template = template;
         sql = template.getDialect().sql(entityInformation);
         paging = template.getDialect().paging();
-        template.registerRepository(entityInformation, this);
 
         mappingData = entityInformation.getMappingData();
 
@@ -71,11 +69,6 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     @Override
     public void delete(ID id) {
         queryById(sql.deleteById(), id, null).update();
-    }
-
-    @Override
-    public void delete(T entity) {
-        delete(idGetter.apply(entity));
     }
 
     @Override
@@ -134,13 +127,8 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     @Override
-    public FK<ID, T> fid(ID id) {
-        return new FK<>(id, this::findOne);
-    }
-
-    @Override
-    public FK<ID, T> fk(T obj) {
-        return new FK<>(idGetter.apply(obj), obj, this::findOne);
+    public Function<T, ID> pkGetter() {
+        return idGetter;
     }
 
     protected <S extends T> S create(S entity) {
@@ -167,27 +155,16 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     @Override
-    public List<T> findAll(Iterable<ID> ids) {
-        List<ID> idList = asList(ids);
+    public <F> F resolveAll(Stream<ID> ids, Function<Stream<T>, F> apply) {
+        Set<ID> idList = ids.collect(Collectors.toSet());
         int pkSize = entityInformation.getPkFields().size();
         RelationalQuery<T> query = query(sql.selectAll(idList.size()), mappingData.getMapper());
-        for (int i = 0; i < idList.size(); i++) {
-            int c = i * pkSize + 1;
-            ID id = idList.get(i);
+        int c = 1;
+        for (ID id : idList) {
             setId(id, query, c);
+            c += pkSize;
         }
-        return query.list();
-    }
-
-    private static <T> List<T> asList(Iterable<T> iterable) {
-        if (iterable instanceof ArrayList)
-            return (List<T>) iterable;
-
-        final List<T> result = new ArrayList<>();
-        for (T item : iterable) {
-            result.add(item);
-        }
-        return result;
+        return query.fetch(apply);
     }
 
     @Override

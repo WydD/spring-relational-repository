@@ -1,7 +1,6 @@
 package fr.petitl.relational.repository.template.bean;
 
 import java.beans.PropertyDescriptor;
-import java.io.Serializable;
 import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,10 +10,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import fr.petitl.relational.repository.annotation.Column;
-import fr.petitl.relational.repository.annotation.Table;
 import fr.petitl.relational.repository.dialect.BeanDialect;
-import fr.petitl.relational.repository.repository.FK;
-import fr.petitl.relational.repository.repository.RelationalRepository;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import org.springframework.beans.BeanUtils;
@@ -65,44 +61,13 @@ public class BeanMappingData<T> {
                     throw new IllegalStateException(e);
                 }
             }
-            final Class fkId;
-            final Class fkType;
-            // Foreign key resolution
-            if (FK.class.isAssignableFrom(field.getType())) {
-                ParameterizedType genericType = (ParameterizedType) field.getGenericType();
-                Type[] fkParam = genericType.getActualTypeArguments();
-                // Fetch types in generic declaration
-                //noinspection unchecked
-                fkId = (Class<?>) fkParam[0];
-                fkType = (Class<?>) fkParam[1];
-            } else {
-                fkId = null;
-                fkType = null;
-            }
             if (colName == null || colName.isEmpty()) {
-                colName = template.getNamingConvention().generateDefaultColumnName(field, fkId != null);
+                colName = template.getNamingConvention().generateDefaultColumnName(field);
             }
             if (reader == null)
                 reader = dialect.defaultReader();
             if (writer == null)
                 writer = dialect.defaultWriter();
-
-            // Wrap the foreign key resolution if any
-            if (fkId != null) {
-                final BeanAttributeReader finalReader = reader;
-                reader = (rs, column, sourceField) -> {
-                    RelationalRepository repository = template.getRepositoryForType(fkType, fkId);
-
-                    Serializable id = (Serializable) finalReader.readAttribute(rs, column, sourceField);
-                    //noinspection unchecked
-                    return id != null ? repository.fid(id) : null;
-                };
-                final BeanAttributeWriter finalWriter = writer;
-                writer = (ps, column, o, sourceField) -> {
-                    FK fk = (FK) o;
-                    finalWriter.writeAttribute(ps, column, o != null ? fk.getId() : null, sourceField);
-                };
-            }
 
             FieldMappingData data;
             PropertyDescriptor f = BeanUtils.getPropertyDescriptor(field.getDeclaringClass(), field.getName());

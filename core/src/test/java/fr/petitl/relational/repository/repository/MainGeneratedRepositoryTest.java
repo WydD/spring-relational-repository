@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import fr.petitl.relational.repository.repository.model.MainGenerated;
 import fr.petitl.relational.repository.template.RelationalTemplate;
@@ -51,7 +52,7 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
     @Test
     public void testDelete2() throws Exception {
         repository.delete(Arrays.asList(new MainGenerated(2, null, null), new MainGenerated(3, null, null)));
-        repository.delete(Arrays.asList(new MainGenerated(4, null, null)));
+        repository.delete(Collections.singletonList(new MainGenerated(4, null, null)));
         verifyDeleted(repository, 1, 2, 3);
     }
 
@@ -87,6 +88,14 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
     public void testFindAll2() throws Exception {
         List<MainGenerated> all = repository.findAll(Arrays.asList(1, 3));
         verifyFindAll(all, 1, 3);
+    }
+
+    @Test
+    public void testFindAllIndexed() throws Exception {
+        Map<Integer, MainGenerated> all = repository.resolveAll(Stream.of(1, 3), repository.asIndex());
+        verifyPojo1(all.get(1));
+        verifyPojo3(all.get(3));
+        assertEquals(2, all.size());
     }
 
     @Test
