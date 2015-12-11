@@ -22,7 +22,7 @@ public class SelectQuery<E> extends AbstractQuery<SelectQuery<E>> {
         this.mapper = mapper;
     }
 
-    public AbstractQuery setPageable(Pageable pageable) {
+    public SelectQuery<E> setPageable(Pageable pageable) {
         if (!preparing) {
             clearParameters();
             preparing = true;
