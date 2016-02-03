@@ -10,7 +10,7 @@ public class UpdateQuery extends AbstractQuery<UpdateQuery> {
     }
 
     public int execute() {
-        return template.executeUpdate(sql.getNativeSql(), null, getPrepareStatement());
+        return template.executeUpdate(query.getQueryString(), null, getPrepareStatement());
     }
 
 }

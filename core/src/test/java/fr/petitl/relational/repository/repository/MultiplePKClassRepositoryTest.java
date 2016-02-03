@@ -1,6 +1,11 @@
 package fr.petitl.relational.repository.repository;
 
-import fr.petitl.relational.repository.repository.model.Multiple;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import fr.petitl.relational.repository.repository.model.MultiplePKClass;
 import fr.petitl.relational.repository.repository.model.MultiplePKClass.MPK;
 import fr.petitl.relational.repository.template.RelationalTemplate;
@@ -12,12 +17,6 @@ import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.stream.Collectors;
 
 import static fr.petitl.relational.repository.TestUtils.set;
 import static org.junit.Assert.*;

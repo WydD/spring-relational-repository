@@ -1,21 +1,21 @@
 package fr.petitl.relational.repository.support;
 
-import fr.petitl.relational.repository.annotation.PK;
-import fr.petitl.relational.repository.annotation.PKClass;
-import fr.petitl.relational.repository.annotation.Table;
-import fr.petitl.relational.repository.template.RelationalTemplate;
-import fr.petitl.relational.repository.template.RowMapper;
-import fr.petitl.relational.repository.template.StatementMapper;
-import fr.petitl.relational.repository.template.bean.BeanMappingData;
-import fr.petitl.relational.repository.template.bean.BeanUnmapper;
-import fr.petitl.relational.repository.template.bean.FieldMappingData;
-import org.springframework.data.repository.core.support.AbstractEntityInformation;
-
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import fr.petitl.relational.repository.annotation.PK;
+import fr.petitl.relational.repository.annotation.PKClass;
+import fr.petitl.relational.repository.annotation.Table;
+import fr.petitl.relational.repository.template.ColumnMapper;
+import fr.petitl.relational.repository.template.RelationalTemplate;
+import fr.petitl.relational.repository.template.RowMapper;
+import fr.petitl.relational.repository.template.bean.BeanMappingData;
+import fr.petitl.relational.repository.template.bean.BeanUnmapper;
+import fr.petitl.relational.repository.template.bean.FieldMappingData;
+import org.springframework.data.repository.core.support.AbstractEntityInformation;
 
 /**
  *
@@ -31,7 +31,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
     private BeanMappingData<T> mappingData;
     private final BeanUnmapper<T> updateUnmapper;
     private final RowMapper<ID> idMapper;
-    private final StatementMapper<ID> idUnmapper;
+    private final Function<ID, List<ColumnMapper>> idUnmapper;
     private final String tableName;
 
 
@@ -81,7 +81,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
             final FieldMappingData pkField = pkFields.get(0);
             //noinspection unchecked
             idMapper = rs -> (ID) pkField.attributeReader.readAttribute(rs, 1, pkField.field);
-            idUnmapper = (pse, id, offset) -> pkField.attributeWriter.writeAttribute(pse, offset, id, pkField.field);
+            idUnmapper = id -> Collections.singletonList((ps, i) -> pkField.attributeWriter.writeAttribute(ps, i, id, pkField.field));
         } else {
             final PKClass annotation = mappingData.getBeanClass().getAnnotation(PKClass.class);
             if (annotation != null) {
@@ -89,7 +89,13 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
                 //noinspection unchecked
                 BeanMappingData<ID> pkMapping = (BeanMappingData<ID>) template.getMappingData(idType);
                 idMapper = pkMapping.getMapper();
-                idUnmapper = new BeanUnmapper<>(pkFields.stream().map(it -> pkMapping.fieldForColumn(it.columnName)).collect(Collectors.toList()));
+                idUnmapper = id -> pkFields.stream().map(pkField -> {
+                    // Make sure type resolution is alright
+                    return (ColumnMapper) (ps, i) -> {
+                        FieldMappingData mapping = pkMapping.fieldForColumn(pkField.columnName);
+                        mapping.attributeWriter.writeAttribute(ps, i, mapping.readMethod.apply(id), mapping.field);
+                    };
+                }).collect(Collectors.toList());
                 idGetter = instance -> {
                     try {
                         //noinspection unchecked
@@ -142,13 +148,16 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         updateUnmapper = new BeanUnmapper<>(list);
     }
 
-    public static <ID> StatementMapper<ID> getObjectArrayUnmapper(List<FieldMappingData> pkFields) {
-        return (pse, id, offset) -> {
+    public static <ID> Function<ID, List<ColumnMapper>> getObjectArrayUnmapper(List<FieldMappingData> pkFields) {
+        return id -> {
             Object[] objects = (Object[]) id;
+            List<ColumnMapper> mappers = new LinkedList<>();
             for (int i = 0; i < pkFields.size(); i++) {
                 FieldMappingData fieldData = pkFields.get(i);
-                fieldData.attributeWriter.writeAttribute(pse, i + offset, objects[i], fieldData.field);
+                Object value = objects[i];
+                mappers.add((ps, idx) -> fieldData.attributeWriter.writeAttribute(ps, idx, value, fieldData.field));
             }
+            return mappers;
         };
     }
 
@@ -184,7 +193,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         return idMapper;
     }
 
-    public StatementMapper<ID> getIdUnmapper() {
+    public Function<ID, List<ColumnMapper>> getIdUnmapper() {
         return idUnmapper;
     }
 

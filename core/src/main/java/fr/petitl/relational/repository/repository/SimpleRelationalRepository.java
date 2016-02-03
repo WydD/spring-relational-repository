@@ -1,5 +1,13 @@
 package fr.petitl.relational.repository.repository;
 
+import java.io.Serializable;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 import fr.petitl.relational.repository.dialect.BeanSQLGeneration;
 import fr.petitl.relational.repository.dialect.PagingGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
@@ -10,15 +18,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-
-import java.io.Serializable;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public class SimpleRelationalRepository<T, ID extends Serializable> implements RelationalRepository<T, ID> {
     private static final RowMapper<Long> COUNT_MAPPER = it -> it.getLong(1);
@@ -52,12 +51,15 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     private <E> SelectQuery<E> queryById(String sql, ID id, RowMapper<E> mapper) {
         SelectQuery<E> query = query(sql, mapper);
-        setId(id, query, 1);
+        setId(id, query, 0);
         return query;
     }
 
     private void setId(ID id, AbstractQuery query, int base) {
-        query.addPrepareStep(pse -> entityInformation.getIdUnmapper().prepare(pse, id, base));
+        List<ColumnMapper> columnMappers = entityInformation.getIdUnmapper().apply(id);
+        for (int i = 0; i < columnMappers.size(); i++) {
+            query.setParameter(base + i, columnMappers.get(i));
+        }
     }
 
     @Override
@@ -68,7 +70,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     @Override
     public void delete(ID id) {
         UpdateQuery query = template.createQuery(sql.deleteById());
-        setId(id, query, 1);
+        setId(id, query, 0);
         query.execute();
     }
 
@@ -169,7 +171,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     protected void setIds(Set<ID> idList, AbstractQuery query) {
         int pkSize = entityInformation.getPkFields().size();
-        int c = 1;
+        int c = 0;
         for (ID id : idList) {
             setId(id, query, c);
             c += pkSize;

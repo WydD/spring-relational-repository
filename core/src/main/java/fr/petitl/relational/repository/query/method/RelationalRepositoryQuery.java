@@ -3,9 +3,10 @@ package fr.petitl.relational.repository.query.method;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import fr.petitl.relational.repository.template.SelectQuery;
+import fr.petitl.relational.repository.template.QueryParser;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
+import fr.petitl.relational.repository.template.SelectQuery;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mapping.model.IllegalMappingException;
 import org.springframework.data.repository.query.Parameter;
@@ -31,25 +32,24 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
         this.parametersConfig = parametersConfiguration;
         selectQuery = new SelectQuery<>(sql, template, mapper);
         // Quick check
-        if (selectQuery.getSql().getNumberOfArguments() != parametersConfig.getBindableParameters().getNumberOfParameters()) {
+        if (selectQuery.getQuery().getNumberOfArguments() != parametersConfig.getBindableParameters().getNumberOfParameters()) {
             throw new IllegalMappingException("Number of argument does not match between the given queries and the method signature: " + method.toString());
         }
-        // Try to resolve everything
-        for (Parameter parameter : parametersConfiguration.getBindableParameters()) {
-            try {
-                if (parameter.isNamedParameter()) {
-                    selectQuery.getSql().resolve(parameter.getName());
-                } else {
-                    selectQuery.getSql().resolve(parameter.getIndex());
+        // Try to resolve everything for named parameter consistency check
+        if (selectQuery.getParsedQuery().getParameterType() == QueryParser.ParameterType.NAMED_PARAMETER) {
+            for (Parameter parameter : parametersConfiguration.getBindableParameters()) {
+                try {
+                    selectQuery.getParsedQuery().resolve(parameter.getName());
+                } catch (IllegalArgumentException | IllegalStateException e) {
+                    throw new IllegalMappingException("Impossible to map parameter " + parameter.toString() + " in method " + method.toString(), e);
                 }
-            } catch (IllegalArgumentException | IllegalStateException e) {
-                throw new IllegalMappingException("Impossible to map parameter " + parameter.toString() + " in method " + method.toString(), e);
             }
         }
     }
 
     @Override
     public Object execute(Object[] parameters) {
+        selectQuery.clearParameters();
         for (Parameter parameter : parametersConfig.getBindableParameters()) {
             Object value = parameters[parameter.getIndex()];
             if (parameter.isNamedParameter()) {

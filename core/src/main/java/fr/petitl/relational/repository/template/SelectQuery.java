@@ -1,14 +1,14 @@
 package fr.petitl.relational.repository.template;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.transaction.support.TransactionTemplate;
-
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  *
@@ -23,16 +23,12 @@ public class SelectQuery<E> extends AbstractQuery<SelectQuery<E>> {
     }
 
     public SelectQuery<E> setPageable(Pageable pageable) {
-        if (!preparing) {
-            clearParameters();
-            preparing = true;
-        }
         this.pageable = pageable;
         return this;
     }
 
     protected Stream<E> stream() {
-        return template.executeQuery(sql.getNativeSql(), null, getPrepareStatement(), mapper);
+        return template.executeQuery(query.getQueryString(), null, getPrepareStatement(), mapper);
     }
 
     public <F> F fetch(Function<Stream<E>, F> collectorFunction) {
@@ -51,13 +47,13 @@ public class SelectQuery<E> extends AbstractQuery<SelectQuery<E>> {
             Long count;
 
             // Get the list of the page
-            String nativeSql = template.getDialect().paging().paging(sql.getNativeSql(), pageable);
+            String nativeSql = template.getDialect().paging().paging(query.getQueryString(), pageable);
             StatementMapper<Object> prepare = getPrepareStatement();
             try (Stream<E> tmp = template.executeQuery(nativeSql, null, prepare, mapper)) {
                 result = tmp.collect(Collectors.toList());
             }
             // count the result
-            String countQuery = "SELECT COUNT(*) FROM (" + this.sql.getNativeSql() + ") SUBQ";
+            String countQuery = "SELECT COUNT(*) FROM (" + query.getQueryString() + ") SUBQ";
             try (Stream<Long> tmp = template.executeQuery(countQuery, null, prepare, rs -> rs.getLong(1))) {
                 count = tmp.findFirst().get();
             }
@@ -80,16 +76,17 @@ public class SelectQuery<E> extends AbstractQuery<SelectQuery<E>> {
     }
 
     protected StatementMapper<Object> getPrepareStatement() {
-        preparing = false;
-        // No prepare is necessary if no operation has been made
-        if (toPrepare.isEmpty() && pageable == null)
-            return null;
+        StatementMapper<Object> parametersMapper = super.getPrepareStatement();
+
+        // If nothing
+        if (parametersMapper == null && pageable == null) return null;
+
         return (ps, ignored, i) -> {
             if (pageable != null) {
                 ps.setFetchSize(pageable.getPageSize());
             }
-            for (PrepareStep op : toPrepare) {
-                op.prepareStatement(ps);
+            if (parametersMapper != null) {
+                parametersMapper.prepare(ps, ignored, i);
             }
         };
     }
