@@ -7,11 +7,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import fr.petitl.relational.repository.template.ColumnMapper;
+import fr.petitl.relational.repository.template.PreparationStep;
 
 /**
  *
  */
-public class FullQuery {
+public class FullQuery implements PreparationStep {
     private List<ParameteredQueryPart> parts;
     private Map<Integer, Collection<ParameteredQueryPart>> parameters = new TreeMap<>();
     private List<ParameteredQueryPart> toSetQueryPart = new LinkedList<>();
@@ -57,15 +58,15 @@ public class FullQuery {
         parts.forEach(action);
     }
 
-    public int prepare(PreparedStatement ps) throws SQLException {
+    public void prepare(PreparedStatement ps) throws SQLException {
         if (!parametersToSet.isEmpty()) {
             throw new IllegalStateException("Preparing phase is unauthorized as some parameters still need to be set " + parametersToSet);
         }
+        if (toSetQueryPart.isEmpty()) return;
         int offset = 1;
         for (ParameteredQueryPart part : toSetQueryPart) {
             offset = part.prepare(ps, offset);
         }
-        return offset;
     }
 
     public String getQueryString() {

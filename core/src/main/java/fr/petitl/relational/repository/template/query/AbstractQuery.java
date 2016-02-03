@@ -1,8 +1,11 @@
-package fr.petitl.relational.repository.template;
+package fr.petitl.relational.repository.template.query;
 
 import java.util.function.Function;
 
 import fr.petitl.relational.repository.query.parametered.FullQuery;
+import fr.petitl.relational.repository.template.ColumnMapper;
+import fr.petitl.relational.repository.template.QueryParser;
+import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.bean.BeanAttributeWriter;
 
 public abstract class AbstractQuery<B extends AbstractQuery> {
@@ -51,13 +54,5 @@ public abstract class AbstractQuery<B extends AbstractQuery> {
 
     public QueryParser getParsedQuery() {
         return parsedQuery;
-    }
-
-    protected StatementMapper<Object> getPrepareStatement() {
-        // No prepare is necessary if no operation has been made
-        if (query.getNumberOfArguments() == 0) return null;
-
-        // else, send the prepare step of query
-        return (ps, ignored, i) -> query.prepare(ps);
     }
 }

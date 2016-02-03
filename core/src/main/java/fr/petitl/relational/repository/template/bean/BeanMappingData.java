@@ -1,7 +1,10 @@
 package fr.petitl.relational.repository.template.bean;
 
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +14,7 @@ import java.util.function.Function;
 
 import fr.petitl.relational.repository.annotation.Column;
 import fr.petitl.relational.repository.dialect.BeanDialect;
+import fr.petitl.relational.repository.template.PreparationStep;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import org.springframework.beans.BeanUtils;
@@ -141,8 +145,12 @@ public class BeanMappingData<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public <S> BeanUnmapper<S> getInsertUnmapper() {
+    public <S extends T> BeanUnmapper<S> getInsertUnmapper() {
         return (BeanUnmapper<S>) unmapper;
+    }
+
+    public <S extends T> PreparationStep getInsertPreparationStep(S s) {
+        return ps -> unmapper.prepare(ps, s);
     }
 
     public Class<T> getBeanClass() {

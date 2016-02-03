@@ -1,14 +1,14 @@
 package fr.petitl.relational.repository.template;
 
+import javax.sql.DataSource;
+import java.sql.Statement;
+
 import fr.petitl.relational.repository.dialect.BeanDialect;
 import fr.petitl.relational.repository.template.bean.NamingConvention;
 import org.springframework.dao.DataAccessException;
 
-import javax.sql.DataSource;
-import java.sql.Statement;
-
 /**
- * Created by WydD on 16/08/2015.
+ * Template capable of counting all queries.
  */
 public class TemplateWithCounter extends RelationalTemplate {
 
@@ -23,9 +23,9 @@ public class TemplateWithCounter extends RelationalTemplate {
     }
 
     @Override
-    protected <E extends Statement, T> T executeDontClose(StatementCallback<E, T> action, StatementProvider<E> supplier) throws DataAccessException {
+    protected <E extends Statement, T> T executeDontClose(StatementProvider<E> supplier, StatementCallback<E, T> action) throws DataAccessException {
         queryCounter++;
-        return super.executeDontClose(action, supplier);
+        return super.executeDontClose(supplier, action);
     }
 
     public long getQueryCounter() {

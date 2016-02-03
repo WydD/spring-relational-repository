@@ -86,17 +86,17 @@ public class RelationalTemplateTest {
     @Test
     public void testExecuteStatement() throws Exception {
         // Test a standard connection
-        Statement c = template.execute(testStatement, Connection::createStatement);
+        Statement c = template.execute(Connection::createStatement, testStatement);
         assertTrue(c.isClosed());
         assertTrue(c.getConnection() == null || c.getConnection().isClosed());
 
         // Test with an exception fired.
         Statement[] returnValue = new Statement[1];
         try {
-            template.execute(st -> {
+            template.execute(Connection::createStatement, st -> {
                 returnValue[0] = st;
                 throw new SQLException("Test");
-            }, Connection::createStatement);
+            });
             assert false;
         } catch (DataAccessException ignored) {
         }
@@ -107,17 +107,17 @@ public class RelationalTemplateTest {
     @Test
     public void testExecuteDontCloseStatement() throws Exception {
         // Test a standard connection
-        Statement c = template.executeDontClose(testStatement, Connection::createStatement);
+        Statement c = template.executeDontClose(Connection::createStatement, testStatement);
         assertFalse(c.isClosed());
         assertFalse(c.getConnection() == null || c.getConnection().isClosed());
 
         // Test with an exception fired.
         Statement[] returnValue = new Statement[1];
         try {
-            template.executeDontClose(st -> {
+            template.executeDontClose(Connection::createStatement, st -> {
                 returnValue[0] = st;
                 throw new SQLException("Test");
-            }, Connection::createStatement);
+            });
             assert false;
         } catch (DataAccessException ignored) {
         }

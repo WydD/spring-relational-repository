@@ -165,7 +165,7 @@ public class MultiplePKClassRepositoryTest extends AbstractRepositoryTest {
     }
 
     protected void verifyEqualsInDB(MultiplePKClass beforeFirst) throws SQLException {
-        repository.getTemplate().execute((PreparedStatement statement) -> {
+        repository.getTemplate().execute(con -> con.prepareStatement("SELECT id, type, name, created_date FROM Multiple WHERE id = " + beforeFirst.getId() + " AND type = '" + beforeFirst.getType() + "'"), (PreparedStatement statement) -> {
             ResultSet rs = statement.executeQuery();
             assertTrue(rs.next());
             assertEquals(beforeFirst.getId().intValue(), rs.getInt(1));
@@ -173,7 +173,7 @@ public class MultiplePKClassRepositoryTest extends AbstractRepositoryTest {
             assertEquals(beforeFirst.getName(), rs.getString(3));
             assertEquals(beforeFirst.getCreatedDate(), rs.getTimestamp(4));
             return 1;
-        }, con -> con.prepareStatement("SELECT id, type, name, created_date FROM Multiple WHERE id = " + beforeFirst.getId() + " AND type = '" + beforeFirst.getType() + "'"));
+        });
     }
 
     @Test
@@ -275,18 +275,18 @@ public class MultiplePKClassRepositoryTest extends AbstractRepositoryTest {
     protected void verifyDeleted(SimpleRelationalRepository<MultiplePKClass, MPK> repository, int count, MPK... missingIds) throws SQLException {
         RelationalTemplate template = repository.getTemplate();
         for (MPK id : missingIds) {
-            template.execute((PreparedStatement statement) -> {
+            template.execute(con -> con.prepareStatement("SELECT * FROM Multiple WHERE id = " + id.id + " AND type='" + id.type + "'"), (PreparedStatement statement) -> {
                 ResultSet rs = statement.executeQuery();
                 assertFalse(rs.next());
                 return 1;
-            }, con -> con.prepareStatement("SELECT * FROM Multiple WHERE id = " + id.id + " AND type='" + id.type + "'"));
+            });
         }
 
-        template.execute((PreparedStatement statement) -> {
+        template.execute(con -> con.prepareStatement("SELECT count(*) FROM Multiple"), (PreparedStatement statement) -> {
             ResultSet rs = statement.executeQuery();
             assertTrue(rs.next());
             assertEquals(count, rs.getInt(1));
             return 1;
-        }, con -> con.prepareStatement("SELECT count(*) FROM Multiple"));
+        });
     }
 }

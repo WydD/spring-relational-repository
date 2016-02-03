@@ -1,4 +1,6 @@
-package fr.petitl.relational.repository.template;
+package fr.petitl.relational.repository.template.query;
+
+import fr.petitl.relational.repository.template.RelationalTemplate;
 
 /**
  *
@@ -10,7 +12,7 @@ public class UpdateQuery extends AbstractQuery<UpdateQuery> {
     }
 
     public int execute() {
-        return template.executeUpdate(query.getQueryString(), null, getPrepareStatement());
+        return template.executeUpdate(query.getQueryString(), query);
     }
 
 }

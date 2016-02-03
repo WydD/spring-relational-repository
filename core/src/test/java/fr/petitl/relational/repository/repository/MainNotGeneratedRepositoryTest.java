@@ -81,14 +81,14 @@ public class MainNotGeneratedRepositoryTest extends AbstractRepositoryTest {
     }
 
     protected void verifyEqualsInDB(MainNotGenerated beforeFirst) throws SQLException {
-        repository.getTemplate().execute((PreparedStatement statement) -> {
+        repository.getTemplate().execute(con -> con.prepareStatement("SELECT id, name, created_date FROM MainNotGenerated WHERE id = " + beforeFirst.getId()), (PreparedStatement statement) -> {
             ResultSet rs = statement.executeQuery();
             assertTrue(rs.next());
             assertEquals(beforeFirst.getId().intValue(), rs.getInt(1));
             assertEquals(beforeFirst.getName(), rs.getString(2));
             assertEquals(beforeFirst.getCreatedDate(), rs.getTimestamp(3));
             return 1;
-        }, con -> con.prepareStatement("SELECT id, name, created_date FROM MainNotGenerated WHERE id = " + beforeFirst.getId()));
+        });
     }
 
     protected SimpleRelationalRepository<MainNotGenerated, Integer> simpleBuild() {

@@ -6,7 +6,9 @@ import java.util.stream.Stream;
 import fr.petitl.relational.repository.template.QueryParser;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
-import fr.petitl.relational.repository.template.SelectQuery;
+import fr.petitl.relational.repository.template.query.AbstractQuery;
+import fr.petitl.relational.repository.template.query.PagedSelectQuery;
+import fr.petitl.relational.repository.template.query.SelectQuery;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mapping.model.IllegalMappingException;
 import org.springframework.data.repository.query.Parameter;
@@ -21,7 +23,7 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
     private final QueryMethod method;
     private Function<Object[], Function<Stream<S>, S>> fetchMethod;
     private Parameters<?, ?> parametersConfig;
-    private final SelectQuery<S> selectQuery;
+    private final AbstractQuery selectQuery;
 
     public RelationalRepositoryQuery(String sql, RelationalTemplate template,
                                      RowMapper<S> mapper, QueryMethod method,
@@ -30,7 +32,11 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
         this.method = method;
         this.fetchMethod = fetchMethod;
         this.parametersConfig = parametersConfiguration;
-        selectQuery = new SelectQuery<>(sql, template, mapper);
+        if (parametersConfig.hasPageableParameter()) {
+            selectQuery = new PagedSelectQuery<>(sql, template, mapper);
+        } else {
+            selectQuery = new SelectQuery<>(sql, template, mapper);
+        }
         // Quick check
         if (selectQuery.getQuery().getNumberOfArguments() != parametersConfig.getBindableParameters().getNumberOfParameters()) {
             throw new IllegalMappingException("Number of argument does not match between the given queries and the method signature: " + method.toString());
@@ -47,6 +53,7 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Object execute(Object[] parameters) {
         selectQuery.clearParameters();
@@ -61,10 +68,12 @@ public class RelationalRepositoryQuery<S> implements RepositoryQuery {
         int pageableIndex = parametersConfig.getPageableIndex();
         if (pageableIndex >= 0) {
             Pageable pageable = (Pageable) parameters[pageableIndex];
+            PagedSelectQuery<S> selectQuery = (PagedSelectQuery<S>) this.selectQuery;
             selectQuery.setPageable(pageable);
-            return selectQuery.page();
+            return selectQuery.fetch();
         }
-        return selectQuery.fetch(fetchMethod.apply(parameters));
+
+        return ((SelectQuery<S>) selectQuery).fetch(fetchMethod.apply(parameters));
     }
 
     @Override

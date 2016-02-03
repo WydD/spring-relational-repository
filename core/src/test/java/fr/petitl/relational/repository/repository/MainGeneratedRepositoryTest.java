@@ -175,14 +175,14 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
     }
 
     protected void verifyEqualsInDB(MainGenerated beforeFirst) throws SQLException {
-        repository.getTemplate().execute((PreparedStatement statement) -> {
+        repository.getTemplate().execute(con -> con.prepareStatement("SELECT id, name, created_date FROM MainGenerated WHERE id = " + beforeFirst.getId()), (PreparedStatement statement) -> {
             ResultSet rs = statement.executeQuery();
             assertTrue(rs.next());
             assertEquals(beforeFirst.getId().intValue(), rs.getInt(1));
             assertEquals(beforeFirst.getName(), rs.getString(2));
             assertEquals(beforeFirst.getCreatedDate(), rs.getTimestamp(3));
             return 1;
-        }, con -> con.prepareStatement("SELECT id, name, created_date FROM MainGenerated WHERE id = " + beforeFirst.getId()));
+        });
     }
 
     @Test
@@ -281,18 +281,18 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
     protected void verifyDeleted(SimpleRelationalRepository<MainGenerated, Integer> repository, int count, Integer... missingIds) throws SQLException {
         RelationalTemplate template = repository.getTemplate();
         for (Integer id : missingIds) {
-            template.execute((PreparedStatement statement) -> {
+            template.execute(con -> con.prepareStatement("SELECT * FROM MainGenerated WHERE id = " + id), (PreparedStatement statement) -> {
                 ResultSet rs = statement.executeQuery();
                 assertFalse(rs.next());
                 return 1;
-            }, con -> con.prepareStatement("SELECT * FROM MainGenerated WHERE id = "+id));
+            });
         }
 
-        template.execute((PreparedStatement statement) -> {
+        template.execute(con -> con.prepareStatement("SELECT count(*) FROM MainGenerated"), (PreparedStatement statement) -> {
             ResultSet rs = statement.executeQuery();
             assertTrue(rs.next());
             assertEquals(count, rs.getInt(1));
             return 1;
-        }, con -> con.prepareStatement("SELECT count(*) FROM MainGenerated"));
+        });
     }
 }

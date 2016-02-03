@@ -13,6 +13,9 @@ import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.CamelToSnakeConvention;
 import fr.petitl.relational.repository.template.bean.MappingFactory;
 import fr.petitl.relational.repository.template.bean.NamingConvention;
+import fr.petitl.relational.repository.template.query.PagedSelectQuery;
+import fr.petitl.relational.repository.template.query.SelectQuery;
+import fr.petitl.relational.repository.template.query.UpdateQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -99,18 +102,18 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
     }
 
 
-    public <E extends Statement, T> T execute(StatementCallback<E, T> action, StatementProvider<E> supplier)
+    public <E extends Statement, T> T execute(StatementProvider<E> supplier, StatementCallback<E, T> action)
             throws DataAccessException {
-        return executeDontClose((E st) -> {
+        return executeDontClose(supplier, (E st) -> {
             try {
                 return action.execute(st);
             } finally {
                 release(st);
             }
-        }, supplier);
+        });
     }
 
-    protected <E extends Statement, T> T executeDontClose(StatementCallback<E, T> action, StatementProvider<E> supplier)
+    protected <E extends Statement, T> T executeDontClose(StatementProvider<E> supplier, StatementCallback<E, T> action)
             throws DataAccessException {
         return executeDontClose((Connection con) -> {
             E stmt = null;
@@ -137,9 +140,24 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         });
     }
 
+    public <E> int[] executeBatch(String sql, Stream<E> input, Function<E, PreparationStep> pse) {
+        return execute(con -> con.prepareStatement(sql), statement -> {
+            try {
+                Iterable<E> iterator = input::iterator;
+                for (E e : iterator) {
+                    if (pse != null)
+                        pse.apply(e).prepare(statement);
+                    statement.addBatch();
+                }
+            } finally {
+                input.close();
+            }
+            return statement.executeBatch();
+        });
+    }
 
     public <E> int[] executeBatch(String sql, Stream<E> input, StatementMapper<E> pse) {
-        return execute(statement -> {
+        return execute(con -> con.prepareStatement(sql), statement -> {
             try {
                 Iterable<E> iterator = input::iterator;
                 for (E e : iterator) {
@@ -152,33 +170,37 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
                 input.close();
             }
             return statement.executeBatch();
-        }, con -> con.prepareStatement(sql));
+        });
+    }
+
+    public int executeUpdate(String sql, PreparationStep ps) {
+        return execute(con -> con.prepareStatement(sql), statement -> {
+            if (ps != null)
+                ps.prepare(statement);
+            return statement.executeUpdate();
+        });
     }
 
     public <E> int executeUpdate(String sql, E input, StatementMapper<E> pse) {
-        return execute(statement -> {
-            if (pse != null)
-                pse.prepare(statement, input);
-            return statement.executeUpdate();
-        }, con -> con.prepareStatement(sql));
+        return executeUpdate(sql, ps -> pse.prepare(ps, input));
     }
 
     public int executeUpdate(String sql) {
-        return executeUpdate(sql, null, null);
+        return executeUpdate(sql, null);
     }
 
     public <E> Stream<E> executeStreamInsertGenerated(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
-        return executeDontClose(statement -> {
+        return executeDontClose(con -> con.prepareStatement(sql), statement -> {
             Connection connection = statement.getConnection();
             return input.onClose(() -> {
                 release(statement);
                 release(connection);
             }).map(it -> translateExceptions("StreamInsertMapping", sql, () -> insertAndGetKey(statement, it, pse, keySetter)));
-        }, con -> con.prepareStatement(sql));
+        });
     }
 
     public <E> E executeInsertGenerated(String sql, E input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
-        return execute(statement -> insertAndGetKey(statement, input, pse, keySetter), con -> con.prepareStatement(sql));
+        return execute(con -> con.prepareStatement(sql), statement -> insertAndGetKey(statement, input, pse, keySetter));
     }
 
     protected <E> E insertAndGetKey(PreparedStatement statement, E input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) throws SQLException {
@@ -197,18 +219,20 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         return input;
     }
 
-    public <E, F> Stream<F> executeQuery(String sql, E input, StatementMapper<E> pse, RowMapper<F> rowMapper) {
-        return executeDontClose(statement -> {
-            if (pse != null)
-                pse.prepare(statement, input);
-            ResultSet rs = statement.executeQuery();
-            Connection connection = statement.getConnection();
-            return StreamSupport.stream(Spliterators.spliteratorUnknownSize(new ResultSetIterator(rs, sql), 0), false).onClose(() -> {
+    public <E, F> F executeQuery(String sql, RowMapper<E> rowMapper, Function<Stream<E>, F> collectorFunction, PreparationStep ps) {
+        return execute(con -> con.prepareStatement(sql), statement -> {
+            ResultSet rs = null;
+            try {
+                if (ps != null)
+                    ps.prepare(statement);
+                rs = statement.executeQuery();
+                Stream<ResultSet> stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(new ResultSetIterator(rs, sql), 0), false);
+                Stream<E> mappedStream = stream.map(it -> translateExceptions("StreamMapping", sql, () -> rowMapper.mapRow(it)));
+                return collectorFunction.apply(mappedStream);
+            } finally {
                 release(rs);
-                release(statement);
-                release(connection);
-            }).map(it -> translateExceptions("StreamMapping", sql, () -> rowMapper.mapRow(it)));
-        }, con -> con.prepareStatement(sql));
+            }
+        });
     }
 
     public UpdateQuery createQuery(String sql) {
@@ -220,7 +244,15 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
     }
 
     public <E> SelectQuery<E> createQuery(String sql, Class<E> mappingType) {
-        return new SelectQuery<>(sql, this, getMappingData(mappingType).getMapper());
+        return createQuery(sql, getMappingData(mappingType).getMapper());
+    }
+
+    public <E> PagedSelectQuery<E> createPagedQuery(String sql, RowMapper<E> mapper) {
+        return new PagedSelectQuery<>(sql, this, mapper);
+    }
+
+    public <E> PagedSelectQuery<E> createPagedQuery(String sql, Class<E> mappingType) {
+        return createPagedQuery(sql, getMappingData(mappingType).getMapper());
     }
 
     @Override
@@ -241,11 +273,11 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         return namingConvention;
     }
 
-    protected interface JdbcCallback<E> {
+    public interface JdbcCallback<E> {
         E execute() throws SQLException;
     }
 
-    protected <E> E translateExceptions(String task, String sql, JdbcCallback<E> callback) {
+    public <E> E translateExceptions(String task, String sql, JdbcCallback<E> callback) {
         try {
             return callback.execute();
         } catch (SQLException e) {

@@ -11,8 +11,13 @@ import java.util.stream.StreamSupport;
 import fr.petitl.relational.repository.dialect.BeanSQLGeneration;
 import fr.petitl.relational.repository.dialect.PagingGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
-import fr.petitl.relational.repository.template.*;
+import fr.petitl.relational.repository.template.ColumnMapper;
+import fr.petitl.relational.repository.template.RelationalTemplate;
+import fr.petitl.relational.repository.template.RowMapper;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
+import fr.petitl.relational.repository.template.query.AbstractQuery;
+import fr.petitl.relational.repository.template.query.SelectQuery;
+import fr.petitl.relational.repository.template.query.UpdateQuery;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -139,7 +144,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         if (generatedPK) {
             return template.executeInsertGenerated(sql.insertInto(), entity, mappingData.getInsertUnmapper(), entityInformation::setId);
         } else {
-            template.executeUpdate(sql.insertInto(), entity, mappingData.getInsertUnmapper());
+            template.executeUpdate(sql.insertInto(), mappingData.getInsertPreparationStep(entity));
             return entity;
         }
     }
@@ -153,7 +158,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
                 return output.collect(Collectors.toList());
             }
         } else {
-            template.executeBatch(sql.insertInto(), stream, mappingData.getInsertUnmapper());
+            template.executeBatch(sql.insertInto(), stream, mappingData::getInsertPreparationStep);
             return entities;
         }
     }
