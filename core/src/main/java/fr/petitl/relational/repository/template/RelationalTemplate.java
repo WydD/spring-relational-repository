@@ -13,6 +13,7 @@ import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.CamelToSnakeConvention;
 import fr.petitl.relational.repository.template.bean.MappingFactory;
 import fr.petitl.relational.repository.template.bean.NamingConvention;
+import fr.petitl.relational.repository.template.query.BatchUpdateQuery;
 import fr.petitl.relational.repository.template.query.PagedSelectQuery;
 import fr.petitl.relational.repository.template.query.SelectQuery;
 import fr.petitl.relational.repository.template.query.UpdateQuery;
@@ -38,6 +39,7 @@ import org.springframework.util.Assert;
 public class RelationalTemplate extends JdbcAccessor implements ApplicationContextAware {
     private static final Logger log = LoggerFactory.getLogger(RelationalTemplate.class);
 
+    protected int maxBatch = 10000;
     protected final BeanDialect dialect;
     protected final MappingFactory mappingFactory;
     protected NativeJdbcExtractor nativeJdbcExtractor;
@@ -156,23 +158,6 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         });
     }
 
-    public <E> int[] executeBatch(String sql, Stream<E> input, StatementMapper<E> pse) {
-        return execute(con -> con.prepareStatement(sql), statement -> {
-            try {
-                Iterable<E> iterator = input::iterator;
-                for (E e : iterator) {
-                    if (pse != null)
-                        pse.prepare(statement, e);
-                    statement.addBatch();
-                }
-            } finally {
-
-                input.close();
-            }
-            return statement.executeBatch();
-        });
-    }
-
     public int executeUpdate(String sql, PreparationStep ps) {
         return execute(con -> con.prepareStatement(sql), statement -> {
             if (ps != null)
@@ -181,15 +166,16 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         });
     }
 
-    public <E> int executeUpdate(String sql, E input, StatementMapper<E> pse) {
-        return executeUpdate(sql, ps -> pse.prepare(ps, input));
+    public BatchOperations batch(String sql) {
+        return executeDontClose(conn -> conn.prepareStatement(sql), ps -> new BatchOperations(ps, sql));
     }
+
 
     public int executeUpdate(String sql) {
         return executeUpdate(sql, null);
     }
 
-    public <E> Stream<E> executeStreamInsertGenerated(String sql, Stream<E> input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
+    public <E> Stream<E> executeStreamInsertGenerated(String sql, Stream<E> input, Function<E, PreparationStep> pse, Function<E, RowMapper<E>> keySetter) {
         return executeDontClose(con -> con.prepareStatement(sql), statement -> {
             Connection connection = statement.getConnection();
             return input.onClose(() -> {
@@ -199,13 +185,13 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         });
     }
 
-    public <E> E executeInsertGenerated(String sql, E input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) {
+    public <E> E executeInsertGenerated(String sql, E input, Function<E, PreparationStep> pse, Function<E, RowMapper<E>> keySetter) {
         return execute(con -> con.prepareStatement(sql), statement -> insertAndGetKey(statement, input, pse, keySetter));
     }
 
-    protected <E> E insertAndGetKey(PreparedStatement statement, E input, StatementMapper<E> pse, Function<E, RowMapper<E>> keySetter) throws SQLException {
+    protected <E> E insertAndGetKey(PreparedStatement statement, E input, Function<E, PreparationStep> pse, Function<E, RowMapper<E>> keySetter) throws SQLException {
         if (pse != null)
-            pse.prepare(statement, input);
+            pse.apply(input).prepare(statement);
         statement.executeUpdate();
         if (keySetter != null) {
             ResultSet rs = statement.getGeneratedKeys();
@@ -237,6 +223,10 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
 
     public UpdateQuery createQuery(String sql) {
         return new UpdateQuery(sql, this);
+    }
+
+    public BatchUpdateQuery createBatchQuery(String sql) {
+        return new BatchUpdateQuery(sql, this);
     }
 
     public <E> SelectQuery<E> createQuery(String sql, RowMapper<E> mapper) {
@@ -317,6 +307,42 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         @Override
         public ResultSet next() {
             return rs;
+        }
+    }
+
+
+    public int getMaxBatch() {
+        return maxBatch;
+    }
+
+    public class BatchOperations {
+        private PreparedStatement ps;
+        private String sql;
+
+        public BatchOperations(PreparedStatement ps, String sql) {
+            this.ps = ps;
+            this.sql = sql;
+        }
+
+        public void prepare(PreparationStep step) {
+            translateExceptions("batch.next", sql, () -> {
+                step.prepare(ps);
+                ps.addBatch();
+                return null;
+            });
+        }
+
+        public int[] execute() {
+            return translateExceptions("batch.execute", sql, () -> ps.executeBatch());
+        }
+
+        public void clean() {
+            translateExceptions("batch.clean", sql, () -> {
+                Connection c = ps.getConnection();
+                release(ps);
+                release(c);
+                return null;
+            });
         }
     }
 }

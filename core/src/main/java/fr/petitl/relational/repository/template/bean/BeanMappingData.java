@@ -25,7 +25,7 @@ import org.springframework.beans.BeanUtils;
 public class BeanMappingData<T> {
 
     private final BeanMapper<T> mapper;
-    private final BeanUnmapper<T> unmapper;
+    private final Function<T, PreparationStep> unmapper;
     private final List<FieldMappingData> fieldData;
 
     private Class<T> clazz;
@@ -125,7 +125,13 @@ public class BeanMappingData<T> {
 
         mapper = new BeanMapper<>(this);
         fieldData = new ArrayList<>(columns.values());
-        unmapper = new BeanUnmapper<>(fieldData);
+        unmapper = entity -> ps -> {
+            int i = 1;
+            for (FieldMappingData field : fieldData) {
+                Object object = field.readMethod.apply(entity);
+                field.attributeWriter.writeAttribute(ps, i++, object, field.field);
+            }
+        };
     }
 
     public FieldMappingData fieldForColumn(String columnName) {
@@ -139,18 +145,12 @@ public class BeanMappingData<T> {
         return fieldData;
     }
 
-    @SuppressWarnings("unchecked")
-    public <S extends T> RowMapper<S> getMapper() {
-        return (BeanMapper<S>) mapper;
-    }
-
-    @SuppressWarnings("unchecked")
-    public <S extends T> BeanUnmapper<S> getInsertUnmapper() {
-        return (BeanUnmapper<S>) unmapper;
+    public RowMapper<T> getMapper() {
+        return mapper;
     }
 
     public <S extends T> PreparationStep getInsertPreparationStep(S s) {
-        return ps -> unmapper.prepare(ps, s);
+        return unmapper.apply(s);
     }
 
     public Class<T> getBeanClass() {

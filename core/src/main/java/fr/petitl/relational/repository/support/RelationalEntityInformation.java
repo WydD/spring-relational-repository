@@ -2,9 +2,11 @@ package fr.petitl.relational.repository.support;
 
 import java.io.Serializable;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import fr.petitl.relational.repository.annotation.PK;
 import fr.petitl.relational.repository.annotation.PKClass;
@@ -13,7 +15,6 @@ import fr.petitl.relational.repository.template.ColumnMapper;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
-import fr.petitl.relational.repository.template.bean.BeanUnmapper;
 import fr.petitl.relational.repository.template.bean.FieldMappingData;
 import org.springframework.data.repository.core.support.AbstractEntityInformation;
 
@@ -24,12 +25,12 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
 
     private final boolean generatedPK;
     private final Function<Object, ID> idGetter;
-    private final Class<?> idType;
+    private final Class<ID> idType;
     private final List<FieldMappingData> pkFields;
     private final HashSet<FieldMappingData> pkSet;
-    private Function<T, RowMapper<T>> idSetter;
+    private IdSetter<T> idSetter;
     private BeanMappingData<T> mappingData;
-    private final BeanUnmapper<T> updateUnmapper;
+    private final Function<T, List<ColumnMapper>> updateUnmapper;
     private final RowMapper<ID> idMapper;
     private final Function<ID, List<ColumnMapper>> idUnmapper;
     private final String tableName;
@@ -73,7 +74,8 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         pkFields = new ArrayList<>(pks.values());
         if (pkFields.size() == 1) {
             FieldMappingData field = pkFields.get(0);
-            idType = field.field.getType();
+            //noinspection unchecked
+            idType = (Class<ID>) field.field.getType();
             idGetter = instance -> {
                 //noinspection unchecked
                 return (ID) field.readMethod.apply(instance);
@@ -85,9 +87,9 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         } else {
             final PKClass annotation = mappingData.getBeanClass().getAnnotation(PKClass.class);
             if (annotation != null) {
-                idType = annotation.value();
                 //noinspection unchecked
-                BeanMappingData<ID> pkMapping = (BeanMappingData<ID>) template.getMappingData(idType);
+                idType = (Class<ID>) annotation.value();
+                BeanMappingData<ID> pkMapping = template.getMappingData(idType);
                 idMapper = pkMapping.getMapper();
                 idUnmapper = id -> pkFields.stream().map(pkField -> {
                     // Make sure type resolution is alright
@@ -99,7 +101,7 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
                 idGetter = instance -> {
                     try {
                         //noinspection unchecked
-                        final ID o = (ID) idType.getConstructor().newInstance();
+                        final ID o = idType.getConstructor().newInstance();
                         for (FieldMappingData pkField : pkFields) {
                             final FieldMappingData field = pkMapping.fieldForColumn(pkField.columnName);
                             field.writeMethod.accept(o, pkField.readMethod.apply(instance));
@@ -110,7 +112,8 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
                     }
                 };
             } else {
-                idType = Object[].class;
+                //noinspection unchecked
+                idType = (Class<ID>) Object[].class;
                 idGetter = instance -> {
                     //noinspection unchecked
                     Object[] objects = new Object[pkFields.size()];
@@ -134,18 +137,21 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         }
         if (generatedPK) {
             final FieldMappingData finalGenerated = generated;
-            idSetter = (T instance) -> (ResultSet rs) -> {
+            idSetter = (instance, rs) -> {
                 Object id = finalGenerated.attributeReader.readAttribute(rs, 1, finalGenerated.field);
                 finalGenerated.writeMethod.accept(instance, id);
-                return instance;
             };
         }
 
-        LinkedList<FieldMappingData> list = new LinkedList<>();
-        mappingData.getFieldData().stream().filter(it -> !pkSet.contains(it)).forEach(list::add);
-        list.addAll(pkFields);
+        List<FieldMappingData> fieldsForUpdate = Stream.concat(
+                mappingData.getFieldData().stream().filter(it -> !pkSet.contains(it)),
+                pkFields.stream()
+        ).collect(Collectors.toList());
 
-        updateUnmapper = new BeanUnmapper<>(list);
+        updateUnmapper = instance -> fieldsForUpdate.stream().map(field -> (ColumnMapper) (ps, i) -> {
+            Object object = field.readMethod.apply(instance);
+            field.attributeWriter.writeAttribute(ps, i, object, field.field);
+        }).collect(Collectors.toList());
     }
 
     public static <ID> Function<ID, List<ColumnMapper>> getObjectArrayUnmapper(List<FieldMappingData> pkFields) {
@@ -170,15 +176,16 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         return idGetter.apply(o);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public Class<ID> getIdType() {
-        return (Class<ID>) idType;
+        return idType;
     }
 
-    @SuppressWarnings("unchecked")
     public <S extends T> RowMapper<S> setId(S entity) {
-        return (RowMapper<S>) idSetter.apply(entity);
+        return rs -> {
+            idSetter.setId(entity, rs);
+            return entity;
+        };
     }
 
     public boolean isGeneratedPK() {
@@ -197,12 +204,15 @@ public class RelationalEntityInformation<T, ID extends Serializable> extends Abs
         return idUnmapper;
     }
 
-    @SuppressWarnings("unchecked")
-    public <S extends T> BeanUnmapper<S> getUpdateUnmapper() {
-        return (BeanUnmapper<S>) updateUnmapper;
+    public Function<T, List<ColumnMapper>> getUpdateUnmapper() {
+        return updateUnmapper;
     }
 
     public String getTableName() {
         return tableName;
+    }
+
+    private interface IdSetter<T> {
+        void setId(T instance, ResultSet rs) throws SQLException;
     }
 }

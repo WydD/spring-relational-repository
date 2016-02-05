@@ -16,6 +16,7 @@ import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.query.AbstractQuery;
+import fr.petitl.relational.repository.template.query.BatchUpdateQuery;
 import fr.petitl.relational.repository.template.query.SelectQuery;
 import fr.petitl.relational.repository.template.query.UpdateQuery;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
@@ -61,7 +62,11 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     private void setId(ID id, AbstractQuery query, int base) {
-        List<ColumnMapper> columnMappers = entityInformation.getIdUnmapper().apply(id);
+        applyUnmapper(id, query, entityInformation.getIdUnmapper(), base);
+    }
+
+    private <E> void applyUnmapper(E e, AbstractQuery query, Function<E, List<ColumnMapper>> unmapper, int base) {
+        List<ColumnMapper> columnMappers = unmapper.apply(e);
         for (int i = 0; i < columnMappers.size(); i++) {
             query.setParameter(base + i, columnMappers.get(i));
         }
@@ -115,7 +120,9 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     @Override
     public <S extends T> S update(S entity) {
-        int number = template.executeUpdate(sql.update(), entity, entityInformation.getUpdateUnmapper());
+        UpdateQuery query = template.createQuery(sql.update());
+        applyUnmapper(entity, query, entityInformation.getUpdateUnmapper(), 0);
+        int number = query.execute();
         if (number != 1) {
             throw new IncorrectResultSizeDataAccessException(1, number);
         }
@@ -123,16 +130,19 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     @Override
-    public <S extends T> void update(Stream<S> entity) {
-        int[] count = new int[]{0};
-        int[] result = template.executeBatch(sql.update(), entity.peek(it -> count[0]++), entityInformation.getUpdateUnmapper());
-        for (int res : result) {
-            if (res != 1) {
-                throw new IncorrectResultSizeDataAccessException(1, res);
-            }
+    public <S extends T> void update(Stream<S> entities) {
+        BatchUpdateQuery query = template.createBatchQuery(sql.update());
+        Iterable<S> it = entities::iterator;
+        int count = 0;
+        for (S entity : it) {
+            applyUnmapper(entity, query, entityInformation.getUpdateUnmapper(), 0);
+            query.next();
+            count++;
         }
-        if (count[0] != result.length)
-            throw new IncorrectResultSizeDataAccessException(count[0], result.length);
+        int total = query.finish();
+        if (total != count) {
+            throw new IncorrectResultSizeDataAccessException(count, total);
+        }
     }
 
     @Override
@@ -142,7 +152,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     protected <S extends T> S create(S entity) {
         if (generatedPK) {
-            return template.executeInsertGenerated(sql.insertInto(), entity, mappingData.getInsertUnmapper(), entityInformation::setId);
+            return template.executeInsertGenerated(sql.insertInto(), entity, mappingData::getInsertPreparationStep, entityInformation::setId);
         } else {
             template.executeUpdate(sql.insertInto(), mappingData.getInsertPreparationStep(entity));
             return entity;
@@ -154,7 +164,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     public <S extends T> Iterable<S> save(Iterable<S> entities) {
         Stream<S> stream = StreamSupport.stream(entities.spliterator(), false);
         if (generatedPK) {
-            try (Stream<S> output = template.executeStreamInsertGenerated(sql.insertInto(), stream, mappingData.getInsertUnmapper(), entityInformation::setId)) {
+            try (Stream<S> output = template.executeStreamInsertGenerated(sql.insertInto(), stream, mappingData::getInsertPreparationStep, entityInformation::setId)) {
                 return output.collect(Collectors.toList());
             }
         } else {

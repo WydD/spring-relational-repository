@@ -16,11 +16,15 @@ public class FullQuery implements PreparationStep {
     private List<ParameteredQueryPart> parts;
     private Map<Integer, Collection<ParameteredQueryPart>> parameters = new TreeMap<>();
     private List<ParameteredQueryPart> toSetQueryPart = new LinkedList<>();
+    private boolean isStatic = true;
     private Set<Integer> parametersToSet;
 
     public FullQuery(List<ParameteredQueryPart> parts) {
         this.parts = parts;
         for (ParameteredQueryPart part : parts) {
+            if (!part.isStatic()) {
+                isStatic = false;
+            }
             int[] requiredParameters = part.getRequiredParameters();
             if (requiredParameters == null) {
                 continue;
@@ -86,5 +90,9 @@ public class FullQuery implements PreparationStep {
 
     public int getNumberOfArguments() {
         return parameters.size();
+    }
+
+    public boolean isStatic() {
+        return isStatic;
     }
 }

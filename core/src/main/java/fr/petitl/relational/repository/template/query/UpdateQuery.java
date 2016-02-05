@@ -14,5 +14,4 @@ public class UpdateQuery extends AbstractQuery<UpdateQuery> {
     public int execute() {
         return template.executeUpdate(query.getQueryString(), query);
     }
-
 }
