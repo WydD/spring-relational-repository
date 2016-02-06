@@ -12,6 +12,7 @@ import fr.petitl.relational.repository.dialect.BeanSQLGeneration;
 import fr.petitl.relational.repository.dialect.PagingGeneration;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.ColumnMapper;
+import fr.petitl.relational.repository.template.PreparationStep;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.RowMapper;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
@@ -57,12 +58,8 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
 
     private <E> SelectQuery<E> queryById(String sql, ID id, RowMapper<E> mapper) {
         SelectQuery<E> query = query(sql, mapper);
-        setId(id, query, 0);
+        applyUnmapper(id, query, entityInformation.getIdUnmapper(), 0);
         return query;
-    }
-
-    private void setId(ID id, AbstractQuery query, int base) {
-        applyUnmapper(id, query, entityInformation.getIdUnmapper(), base);
     }
 
     private <E> void applyUnmapper(E e, AbstractQuery query, Function<E, List<ColumnMapper>> unmapper, int base) {
@@ -80,7 +77,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     @Override
     public void delete(ID id) {
         UpdateQuery query = template.createQuery(sql.deleteById());
-        setId(id, query, 0);
+        applyUnmapper(id, query, entityInformation.getIdUnmapper(), 0);
         query.execute();
     }
 
@@ -151,10 +148,12 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     protected <S extends T> S create(S entity) {
+        PreparationStep ps = mappingData.getInsertPreparationStep(entity);
+        String insertInto = this.sql.insertInto();
         if (generatedPK) {
-            return template.executeInsertGenerated(sql.insertInto(), entity, mappingData::getInsertPreparationStep, entityInformation::setId);
+            return template.executeInsertGenerated(insertInto, entity, ps, entityInformation::setId);
         } else {
-            template.executeUpdate(sql.insertInto(), mappingData.getInsertPreparationStep(entity));
+            template.executeUpdate(insertInto, ps);
             return entity;
         }
     }
@@ -163,12 +162,11 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     @Override
     public <S extends T> Iterable<S> save(Iterable<S> entities) {
         Stream<S> stream = StreamSupport.stream(entities.spliterator(), false);
+        String insertInto = this.sql.insertInto();
         if (generatedPK) {
-            try (Stream<S> output = template.executeStreamInsertGenerated(sql.insertInto(), stream, mappingData::getInsertPreparationStep, entityInformation::setId)) {
-                return output.collect(Collectors.toList());
-            }
+            return template.executeStreamInsertGenerated(insertInto, stream, mappingData::getInsertPreparationStep, entityInformation::setId, st -> st.collect(Collectors.toList()));
         } else {
-            template.executeBatch(sql.insertInto(), stream, mappingData::getInsertPreparationStep);
+            template.executeBatch(insertInto, stream, mappingData::getInsertPreparationStep);
             return entities;
         }
     }
@@ -188,7 +186,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         int pkSize = entityInformation.getPkFields().size();
         int c = 0;
         for (ID id : idList) {
-            setId(id, query, c);
+            applyUnmapper(id, query, entityInformation.getIdUnmapper(), c);
             c += pkSize;
         }
     }
@@ -210,7 +208,6 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         return query(sql.selectAll(), mappingData.getMapper()).fetch(apply);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public <F> F fetchAllIds(Function<Stream<ID>, F> apply) {
         return query(sql.selectIds(), rs -> entityInformation.getIdMapper().mapRow(rs)).fetch(apply);

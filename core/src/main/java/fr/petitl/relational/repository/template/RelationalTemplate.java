@@ -175,23 +175,20 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         return executeUpdate(sql, null);
     }
 
-    public <E> Stream<E> executeStreamInsertGenerated(String sql, Stream<E> input, Function<E, PreparationStep> pse, Function<E, RowMapper<E>> keySetter) {
-        return executeDontClose(con -> con.prepareStatement(sql), statement -> {
-            Connection connection = statement.getConnection();
-            return input.onClose(() -> {
-                release(statement);
-                release(connection);
-            }).map(it -> translateExceptions("StreamInsertMapping", sql, () -> insertAndGetKey(statement, it, pse, keySetter)));
+    public <E, F> F executeStreamInsertGenerated(String sql, Stream<E> input, Function<E, PreparationStep> pse, Function<E, RowMapper<E>> keySetter, Function<Stream<E>, F> collectorFunction) {
+        return execute(con -> con.prepareStatement(sql), statement -> {
+            Stream<E> insertAll = input.map(it -> translateExceptions("StreamInsertMapping", sql, () -> insertAndGetKey(statement, it, pse.apply(it), keySetter)));
+            return collectorFunction.apply(insertAll);
         });
     }
 
-    public <E> E executeInsertGenerated(String sql, E input, Function<E, PreparationStep> pse, Function<E, RowMapper<E>> keySetter) {
-        return execute(con -> con.prepareStatement(sql), statement -> insertAndGetKey(statement, input, pse, keySetter));
+    public <E> E executeInsertGenerated(String sql, E input, PreparationStep ps, Function<E, RowMapper<E>> keySetter) {
+        return execute(con -> con.prepareStatement(sql), statement -> insertAndGetKey(statement, input, ps, keySetter));
     }
 
-    protected <E> E insertAndGetKey(PreparedStatement statement, E input, Function<E, PreparationStep> pse, Function<E, RowMapper<E>> keySetter) throws SQLException {
-        if (pse != null)
-            pse.apply(input).prepare(statement);
+    protected <E> E insertAndGetKey(PreparedStatement statement, E input, PreparationStep ps, Function<E, RowMapper<E>> keySetter) throws SQLException {
+        if (ps != null)
+            ps.prepare(statement);
         statement.executeUpdate();
         if (keySetter != null) {
             ResultSet rs = statement.getGeneratedKeys();
