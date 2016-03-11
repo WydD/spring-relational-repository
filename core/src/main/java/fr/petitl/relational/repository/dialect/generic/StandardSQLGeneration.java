@@ -12,6 +12,7 @@ import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.FieldMappingData;
 
+import static fr.petitl.relational.repository.util.SqlStringUtil.questionMarks;
 import static java.lang.String.format;
 
 /**
@@ -110,17 +111,6 @@ public class StandardSQLGeneration<T, ID extends Serializable> implements BeanSQ
     public String update() {
         return update;
     }
-
-    protected String questionMarks(int count) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < count; i++) {
-            if (i > 0)
-                builder.append(", ");
-            builder.append("?");
-        }
-        return builder.toString();
-    }
-
 
     protected String simpleIdIn(int count) {
         return idColumns + " IN (" + questionMarks(count) + ")";

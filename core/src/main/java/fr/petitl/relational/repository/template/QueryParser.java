@@ -1,11 +1,10 @@
 package fr.petitl.relational.repository.template;
 
 import java.sql.SQLSyntaxErrorException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
+import fr.petitl.relational.repository.query.macro.MacroFunction;
 import fr.petitl.relational.repository.query.parametered.FullQuery;
 import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
@@ -28,6 +27,7 @@ public class QueryParser {
     private int i = 0;
     private int length;
     private String sql;
+    private Map<String, MacroFunction> allowedMacros;
     private boolean readable;
     private Map<String, Integer> namedParameterIndex = new HashMap<>();
     private int index = 0;
@@ -35,7 +35,13 @@ public class QueryParser {
     private ParameterType parameterType = ParameterType.NONE;
 
     public QueryParser(String sql) throws SQLSyntaxErrorException {
+        this(sql, Collections.emptyList());
+    }
+
+    public QueryParser(String sql, List<MacroFunction> allowedMacros) throws SQLSyntaxErrorException {
         this.sql = sql;
+        // indexed macros
+        this.allowedMacros = allowedMacros.stream().collect(Collectors.toMap(MacroFunction::name, it -> it));
         length = sql.length();
         readable = length > 0;
         parse();
@@ -58,6 +64,12 @@ public class QueryParser {
                     selectParameterType(ParameterType.POSITIONAL);
                 }
                 queryParts.add(new SingleParameterQueryPart(n));
+            } else if (c == '#') {
+                String macroName = ident();
+                MacroFunction macro = allowedMacros.get(macroName.toLowerCase());
+                if (macro == null) {
+                    throw new SQLSyntaxErrorException("Unknown macro " + macroName);
+                }
             } else if (c == ':') {
                 queryParts.add(new StringQueryPart(plain.toString()));
                 plain = new StringBuilder();
@@ -77,6 +89,17 @@ public class QueryParser {
             queryParts.add(new StringQueryPart(plain.toString()));
         }
         query = new FullQuery(queryParts);
+    }
+
+    private List<List<ParameteredQueryPart>> parameters() {
+        List<List<ParameteredQueryPart>> result;
+        while (readable) {
+
+        }
+    }
+
+    private List<ParameteredQueryPart> parameter() {
+
     }
 
     private void selectParameterType(ParameterType parameterType) throws SQLSyntaxErrorException {

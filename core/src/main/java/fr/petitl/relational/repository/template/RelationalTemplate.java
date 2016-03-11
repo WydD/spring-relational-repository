@@ -177,8 +177,12 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
 
     public <E, F> F executeStreamInsertGenerated(String sql, Stream<E> input, Function<E, PreparationStep> pse, Function<E, RowMapper<E>> keySetter, Function<Stream<E>, F> collectorFunction) {
         return execute(con -> con.prepareStatement(sql), statement -> {
-            Stream<E> insertAll = input.map(it -> translateExceptions("StreamInsertMapping", sql, () -> insertAndGetKey(statement, it, pse.apply(it), keySetter)));
-            return collectorFunction.apply(insertAll);
+            try {
+                Stream<E> insertAll = input.map(it -> translateExceptions("StreamInsertMapping", sql, () -> insertAndGetKey(statement, it, pse.apply(it), keySetter)));
+                return collectorFunction.apply(insertAll);
+            } finally {
+                input.close();
+            }
         });
     }
 
