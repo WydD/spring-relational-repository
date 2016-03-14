@@ -50,6 +50,9 @@ public class SingleInMacro implements MacroFunction {
 
         @Override
         public void setParameter(int parameterNumber, Object parameter, Function<Object, ColumnMapper> defaultSetter) {
+            if (parameterNumber != parameters[0]) {
+                throw new IllegalArgumentException("Trying to set a parameter number that is configured to be this one");
+            }
             this.defaultSetter = defaultSetter;
             if (parameter instanceof Collection) {
                 toSet = (Collection) parameter;
