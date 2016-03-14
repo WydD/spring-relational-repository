@@ -10,6 +10,11 @@ public class StringQueryPart implements ParameteredQueryPart {
         this.fragment = fragment;
     }
 
+    public String trimFragment() {
+        fragment = fragment.trim();
+        return fragment;
+    }
+
     @Override
     public String getFragment() {
         return fragment;

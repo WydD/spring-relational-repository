@@ -1,8 +1,12 @@
 package fr.petitl.relational.repository.template;
 
 import java.sql.SQLSyntaxErrorException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
+import fr.petitl.relational.repository.query.macro.MacroFunction;
+import fr.petitl.relational.repository.query.macro.SingleInMacro;
 import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.query.parametered.StringQueryPart;
@@ -100,6 +104,34 @@ public class QueryParserTest {
         assertArrayEquals(new int[]{1}, parts.get(5).getRequiredParameters());
     }
 
+
+    @Test
+    public void testMacro() throws SQLSyntaxErrorException {
+        QueryParser query = new QueryParser("SELECT * FROM Test WHERE #in{ id ; ? }", Collections.singletonList(new SingleInMacro()));
+        assertEquals(QueryParser.ParameterType.QUESTION_MARKS, query.getParameterType());
+        List<ParameteredQueryPart> parts = query.getQueryParts();
+        assertTrue(parts.get(0) instanceof StringQueryPart);
+        assertEquals("SELECT * FROM Test WHERE ", parts.get(0).getFragment());
+
+        assertTrue(parts.get(1) instanceof SingleInMacro.Executor);
+        assertArrayEquals(new int[]{0}, parts.get(1).getRequiredParameters());
+
+        SingleInMacro.Executor macroPart = (SingleInMacro.Executor) parts.get(1);
+        assertEquals("id", macroPart.getAttribute());
+
+        assertEquals(2, parts.size());
+    }
+
+    @Test
+    public void testBadMacro() throws SQLSyntaxErrorException {
+        SingleInMacro inMacro = new SingleInMacro();
+        testException("SELECT * FROM Test WHERE #in{ id ; ? }");
+        testException("SELECT * FROM Test WHERE #in { id ; s? }", inMacro);
+        testException("SELECT * FROM Test WHERE #in { id ; s?", inMacro);
+        testException("SELECT * FROM Test WHERE #in { ? ; s}", inMacro);
+        testException("SELECT * FROM Test WHERE #in { id , ? }", inMacro);
+    }
+
     @Test
     public void testMixingTypes() throws SQLSyntaxErrorException {
         testException("SELECT * FROM Test WHERE id = ? AND a = '\\':' AND enabled = ?0");
@@ -110,9 +142,9 @@ public class QueryParserTest {
         testException("SELECT * FROM Test WHERE id = ? AND a = '\\");
     }
 
-    private void testException(String sql) {
+    private void testException(String sql, MacroFunction... macros) {
         try {
-            new QueryParser(sql);
+            new QueryParser(sql, Arrays.asList(macros));
             assert false;
         } catch (SQLSyntaxErrorException ignored) {
             //

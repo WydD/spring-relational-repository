@@ -5,16 +5,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import fr.petitl.relational.repository.query.macro.MacroFunction;
-import fr.petitl.relational.repository.query.parametered.FullQuery;
-import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
-import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
-import fr.petitl.relational.repository.query.parametered.StringQueryPart;
+import fr.petitl.relational.repository.query.parametered.*;
 
 /**
  *
  */
 public class QueryParser {
 
+    public static final HashSet<Character> OUT_OF_PARAMETER_CHARS = new HashSet<>(Arrays.asList(';', '}'));
     private FullQuery query;
 
     public enum ParameterType {
@@ -48,14 +46,22 @@ public class QueryParser {
     }
 
     private void parse() throws SQLSyntaxErrorException {
+        parseMain(queryParts, null);
+        query = new FullQuery(queryParts);
+    }
+
+    private void parseMain(List<ParameteredQueryPart> queryParts, Set<Character> outChars) throws SQLSyntaxErrorException {
         StringBuilder plain = new StringBuilder();
         while (readable) {
-            char c = read();
+            char c = current();
+            if (outChars != null && outChars.contains(c)) {
+                break;
+            }
+            advance();
             if (c == '\'') {
                 plain.append(stringLiteral());
             } else if (c == '?') {
-                queryParts.add(new StringQueryPart(plain.toString()));
-                plain = new StringBuilder();
+                plain = appendStringPart(queryParts, plain);
                 int n = integer();
                 if (n < 0) {
                     selectParameterType(ParameterType.QUESTION_MARKS);
@@ -65,14 +71,19 @@ public class QueryParser {
                 }
                 queryParts.add(new SingleParameterQueryPart(n));
             } else if (c == '#') {
+                plain = appendStringPart(queryParts, plain);
                 String macroName = ident();
                 MacroFunction macro = allowedMacros.get(macroName.toLowerCase());
                 if (macro == null) {
                     throw new SQLSyntaxErrorException("Unknown macro " + macroName);
                 }
+                List<List<ParameteredQueryPart>> parameters = parameters();
+                if (macro.numberOfParameters() != parameters.size()) {
+                    throw new SQLSyntaxErrorException("Invalid number of parameters give to the macro "+macro.name()+" expected "+macro.numberOfParameters()+" given "+parameters.size());
+                }
+                queryParts.add(macro.build(parameters));
             } else if (c == ':') {
-                queryParts.add(new StringQueryPart(plain.toString()));
-                plain = new StringBuilder();
+                plain = appendStringPart(queryParts, plain);
                 String ident = ident();
                 Integer i = namedParameterIndex.get(ident);
                 if (i == null) {
@@ -88,18 +99,68 @@ public class QueryParser {
         if (plain.length() > 0) {
             queryParts.add(new StringQueryPart(plain.toString()));
         }
-        query = new FullQuery(queryParts);
     }
 
-    private List<List<ParameteredQueryPart>> parameters() {
-        List<List<ParameteredQueryPart>> result;
-        while (readable) {
+    private StringBuilder appendStringPart(List<ParameteredQueryPart> queryParts, StringBuilder plain) {
+        if (plain.length() > 0)
+            queryParts.add(new StringQueryPart(plain.toString()));
+        plain = new StringBuilder();
+        return plain;
+    }
 
+    private List<List<ParameteredQueryPart>> parameters() throws SQLSyntaxErrorException {
+        List<List<ParameteredQueryPart>> result = new LinkedList<>();
+        space();
+        if (current() == '{') {
+            advance();
+        } else {
+            // No parameters
+            return result;
+        }
+        if (current() == '}') {
+            // Empty parameters list
+            advance();
+            return result;
+        }
+        while (readable) {
+            result.add(parameter());
+
+            char c = current();
+            if (c == '}') {
+                advance();
+                break;
+            } else if (c == ';') {
+                advance();
+            }
+        }
+        return result;
+    }
+
+    private void space() throws SQLSyntaxErrorException {
+        while (readable) {
+            char c = current();
+            if (Character.isSpaceChar(c)) {
+                advance();
+            } else {
+                return;
+            }
         }
     }
 
-    private List<ParameteredQueryPart> parameter() {
-
+    private List<ParameteredQueryPart> parameter() throws SQLSyntaxErrorException {
+        space();
+        LinkedList<ParameteredQueryPart> parameterParts = new LinkedList<>();
+        parseMain(parameterParts, OUT_OF_PARAMETER_CHARS);
+        ParameteredQueryPart part = parameterParts.get(parameterParts.size() - 1);
+        // we dont want empty parameters
+        if (part instanceof StringQueryPart) {
+            String f = ((StringQueryPart) part).trimFragment();
+            // If we have trimed to void, remove. Can happen in '? '
+            if (f.isEmpty()) {
+                parameterParts.remove(parameterParts.size() - 1);
+            }
+        }
+        return parameterParts;
     }
 
     private void selectParameterType(ParameterType parameterType) throws SQLSyntaxErrorException {
@@ -109,7 +170,7 @@ public class QueryParser {
         this.parameterType = parameterType;
     }
 
-    private String ident() {
+    private String ident() throws SQLSyntaxErrorException {
         StringBuilder plain = new StringBuilder();
         while (readable) {
             char c = current();
@@ -123,7 +184,7 @@ public class QueryParser {
         return plain.toString();
     }
 
-    private int integer() {
+    private int integer() throws SQLSyntaxErrorException {
         int n = 0;
         boolean first = true;
         while (readable) {
@@ -144,11 +205,14 @@ public class QueryParser {
     }
 
 
-    private char current() {
+    private char current() throws SQLSyntaxErrorException {
+        if (i >= sql.length()) {
+            throw new SQLSyntaxErrorException("Encountered unexpected EOF");
+        }
         return sql.charAt(i);
     }
 
-    private char read() {
+    private char read() throws SQLSyntaxErrorException {
         char c = current();
         advance();
         return c;

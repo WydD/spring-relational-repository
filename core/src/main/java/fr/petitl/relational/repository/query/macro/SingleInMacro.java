@@ -3,6 +3,7 @@ package fr.petitl.relational.repository.query.macro;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
@@ -31,12 +32,8 @@ public class SingleInMacro implements MacroFunction {
 
     @Override
     public ParameteredQueryPart build(List<List<ParameteredQueryPart>> arguments) throws SQLSyntaxErrorException {
-        assert arguments.size() == 2;
-        ParameteredQueryPart attributeName = arguments.get(0).get(0);
-        ParameteredQueryPart parameter = arguments.get(1).get(0);
-        if (!(parameter instanceof SingleParameterQueryPart) || !(attributeName instanceof StringQueryPart)) {
-            throw new SQLSyntaxErrorException("Invalid context while executing macro 'IN' which needs {attributeName}{parameter}");
-        }
+        StringQueryPart attributeName = MacroUtils.extractString(arguments, 0);
+        SingleParameterQueryPart parameter = MacroUtils.extractParameter(arguments, 1);
         return new Executor(attributeName.getFragment(), parameter.getRequiredParameters());
     }
 
@@ -57,8 +54,7 @@ public class SingleInMacro implements MacroFunction {
             if (parameter instanceof Collection) {
                 toSet = (Collection) parameter;
             } else if (parameter.getClass().isArray()) {
-                // TODO
-                throw new UnsupportedOperationException("NOT YET IMPLEMENTED");
+                toSet = Arrays.asList((Object[])parameter);
             } else if (parameter instanceof Stream) {
                 Stream<?> asStream = (Stream) parameter;
                 toSet = asStream.collect(Collectors.toList());
@@ -92,6 +88,10 @@ public class SingleInMacro implements MacroFunction {
         @Override
         public int[] getRequiredParameters() {
             return parameters;
+        }
+
+        public String getAttribute() {
+            return attribute;
         }
 
         @Override
