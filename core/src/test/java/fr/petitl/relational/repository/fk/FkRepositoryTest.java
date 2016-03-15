@@ -1,5 +1,12 @@
 package fr.petitl.relational.repository.fk;
 
+import javax.annotation.PostConstruct;
+import javax.sql.DataSource;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import fr.petitl.relational.repository.EnableRelationalRepositories;
 import fr.petitl.relational.repository.SpringTest;
 import fr.petitl.relational.repository.dialect.SimpleDialectProvider;
@@ -9,6 +16,7 @@ import fr.petitl.relational.repository.fk.domain.Location;
 import fr.petitl.relational.repository.fk.repository.CountryRepository;
 import fr.petitl.relational.repository.fk.repository.EventRepository;
 import fr.petitl.relational.repository.fk.repository.LocationRepository;
+import fr.petitl.relational.repository.query.macro.SingleInMacro;
 import fr.petitl.relational.repository.repository.FKResolver;
 import fr.petitl.relational.repository.template.TemplateWithCounter;
 import org.junit.After;
@@ -19,13 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
-
-import javax.annotation.PostConstruct;
-import javax.sql.DataSource;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Provides a simple case of foreign key integration in spring relational repository.
@@ -169,7 +170,9 @@ public class FkRepositoryTest extends SpringTest {
 
         @Bean
         public TemplateWithCounter relationalTemplate(DataSource dataSource) {
-            return new TemplateWithCounter(dataSource, SimpleDialectProvider.h2());
+            TemplateWithCounter template = new TemplateWithCounter(dataSource, SimpleDialectProvider.h2());
+            template.getAvailableMacros().add(new SingleInMacro());
+            return template;
         }
     }
 

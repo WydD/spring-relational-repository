@@ -3,12 +3,15 @@ package fr.petitl.relational.repository.template;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import fr.petitl.relational.repository.dialect.BeanDialect;
+import fr.petitl.relational.repository.query.macro.MacroFunction;
 import fr.petitl.relational.repository.template.bean.BeanMappingData;
 import fr.petitl.relational.repository.template.bean.CamelToSnakeConvention;
 import fr.petitl.relational.repository.template.bean.MappingFactory;
@@ -45,6 +48,7 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
     protected NativeJdbcExtractor nativeJdbcExtractor;
     protected TransactionTemplate transactionTemplate;
     protected final NamingConvention namingConvention;
+    protected List<MacroFunction> availableMacros = new LinkedList<>();
 
     public RelationalTemplate(DataSource ds, BeanDialect dialect) {
         this(ds, dialect, new CamelToSnakeConvention());
@@ -276,6 +280,9 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
         }
     }
 
+    public List<MacroFunction> getAvailableMacros() {
+        return availableMacros;
+    }
 
     protected void release(Statement st) {
         JdbcUtils.closeStatement(st);

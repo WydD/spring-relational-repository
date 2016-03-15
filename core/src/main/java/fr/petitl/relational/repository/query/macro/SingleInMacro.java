@@ -1,9 +1,10 @@
 package fr.petitl.relational.repository.query.macro;
 
+import java.lang.reflect.Array;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
@@ -40,7 +41,7 @@ public class SingleInMacro implements MacroFunction {
     public static class Executor implements ParameteredQueryPart {
         private final String attribute;
         private final int[] parameters;
-        private Collection<?> toSet;
+        private Collection<Object> toSet;
         private Function<Object, ColumnMapper> defaultSetter;
 
         public Executor(String attribute, int[] parameters) {
@@ -57,7 +58,11 @@ public class SingleInMacro implements MacroFunction {
             if (parameter instanceof Collection) {
                 toSet = (Collection) parameter;
             } else if (parameter.getClass().isArray()) {
-                toSet = Arrays.asList((Object[])parameter);
+                int length = Array.getLength(parameter);
+                toSet = new ArrayList<>(length);
+                for (int i = 0; i < length; i++) {
+                    toSet.add(Array.get(parameter, i));
+                }
             } else if (parameter instanceof Stream) {
                 Stream<?> asStream = (Stream) parameter;
                 toSet = asStream.collect(Collectors.toList());

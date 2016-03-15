@@ -17,7 +17,7 @@ public abstract class AbstractQuery<B extends AbstractQuery> {
     private final QueryParser parsedQuery;
 
     public AbstractQuery(String sql, RelationalTemplate template) {
-        parsedQuery = template.translateExceptions("ParseQuery", sql, () -> new QueryParser(sql));
+        parsedQuery = template.translateExceptions("ParseQuery", sql, () -> new QueryParser(sql, template.getAvailableMacros()));
         query = parsedQuery.getQuery();
         this.template = template;
         BeanAttributeWriter defaultWriter = template.getDialect().defaultWriter();
