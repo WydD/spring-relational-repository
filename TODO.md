@@ -1,6 +1,5 @@
 To implement
-* Collection setter (for instance findByIds(List<Integer> ids)), will be dialect specific obv
-  * 1-n foreign key resolution?
+* Integrate macros in dialect
 * Merge impl (and default based on dialect)
 * Group By mappings
 * Other dialects
@@ -9,4 +8,4 @@ To implement
 * Trigger handling?
 
 To be checked
-* FK management
+* *-n FK management
