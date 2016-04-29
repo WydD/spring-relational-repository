@@ -1,9 +1,12 @@
 package fr.petitl.relational.repository.dialect;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Function;
 
 import fr.petitl.relational.repository.dialect.generic.SpringJDBCAttributeMapper;
 import fr.petitl.relational.repository.dialect.generic.StandardSQLGeneration;
+import fr.petitl.relational.repository.query.macro.MacroFunction;
 import fr.petitl.relational.repository.support.RelationalEntityInformation;
 import fr.petitl.relational.repository.template.bean.BeanAttributeReader;
 import fr.petitl.relational.repository.template.bean.BeanAttributeWriter;
@@ -17,6 +20,7 @@ public class BeanDialect {
     private final PagingGeneration paging;
     private final BeanAttributeReader reader;
     private final BeanAttributeWriter writer;
+    private final List<MacroFunction> availableMacros = new LinkedList<>();
 
     public BeanDialect(Function<RelationalEntityInformation<?, ?>, BeanSQLGeneration> sqlProvider, PagingGeneration paging, BeanAttributeReader reader, BeanAttributeWriter writer) {
         this.sqlProvider = sqlProvider;
@@ -51,5 +55,14 @@ public class BeanDialect {
 
     public BeanAttributeWriter defaultWriter() {
         return writer;
+    }
+
+    public List<MacroFunction> availableMacros() {
+        return availableMacros;
+    }
+
+    public BeanDialect addMacro(MacroFunction function) {
+        availableMacros.add(function);
+        return this;
     }
 }

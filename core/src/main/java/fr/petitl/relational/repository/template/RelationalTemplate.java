@@ -48,7 +48,6 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
     protected NativeJdbcExtractor nativeJdbcExtractor;
     protected TransactionTemplate transactionTemplate;
     protected final NamingConvention namingConvention;
-    protected List<MacroFunction> availableMacros = new LinkedList<>();
 
     public RelationalTemplate(DataSource ds, BeanDialect dialect) {
         this(ds, dialect, new CamelToSnakeConvention());

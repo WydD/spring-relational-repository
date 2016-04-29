@@ -171,7 +171,6 @@ public class FkRepositoryTest extends SpringTest {
         @Bean
         public TemplateWithCounter relationalTemplate(DataSource dataSource) {
             TemplateWithCounter template = new TemplateWithCounter(dataSource, SimpleDialectProvider.h2());
-            template.getAvailableMacros().add(new SingleInMacro());
             return template;
         }
     }
