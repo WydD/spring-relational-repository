@@ -280,7 +280,7 @@ public class RelationalTemplate extends JdbcAccessor implements ApplicationConte
     }
 
     public List<MacroFunction> getAvailableMacros() {
-        return availableMacros;
+        return dialect.availableMacros();
     }
 
     protected void release(Statement st) {
