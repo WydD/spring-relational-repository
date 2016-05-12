@@ -5,12 +5,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import fr.petitl.relational.repository.dialect.BeanDialect;
 import fr.petitl.relational.repository.query.macro.MacroFunction;
 import fr.petitl.relational.repository.query.macro.SingleInMacro;
 import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.query.parametered.StringQueryPart;
 import org.junit.Test;
+import org.springframework.jdbc.datasource.DelegatingDataSource;
 
 import static org.junit.Assert.*;
 
@@ -19,9 +21,12 @@ import static org.junit.Assert.*;
  */
 public class QueryParserTest {
 
+    RelationalTemplate voidTemplate = new RelationalTemplate(new DelegatingDataSource(), new BeanDialect(null));
+    RelationalTemplate singleInTemplate = new RelationalTemplate(new DelegatingDataSource(), new BeanDialect(null).addMacro(new SingleInMacro()));
+
     @Test
     public void testSimpleWithout() throws SQLSyntaxErrorException {
-        QueryParser query = new QueryParser("SELECT * FROM Test");
+        QueryParser query = new QueryParser("SELECT * FROM Test", voidTemplate);
         assertEquals(QueryParser.ParameterType.NONE, query.getParameterType());
         List<ParameteredQueryPart> parts = query.getQueryParts();
 
@@ -31,7 +36,7 @@ public class QueryParserTest {
 
     @Test
     public void testSimpleWithNamedParameters() throws SQLSyntaxErrorException {
-        QueryParser query = new QueryParser("SELECT * FROM Test WHERE id = :id AND a = '\\':''' AND enabled = :enabled OR ready = :enabled");
+        QueryParser query = new QueryParser("SELECT * FROM Test WHERE id = :id AND a = '\\':''' AND enabled = :enabled OR ready = :enabled", voidTemplate);
         assertEquals(QueryParser.ParameterType.NAMED_PARAMETER, query.getParameterType());
         List<ParameteredQueryPart> parts = query.getQueryParts();
         assertTrue(parts.get(0) instanceof StringQueryPart);
@@ -59,7 +64,7 @@ public class QueryParserTest {
 
     @Test
     public void testSimpleWithQuestionMarks() throws SQLSyntaxErrorException {
-        QueryParser query = new QueryParser("SELECT * FROM Test WHERE id = ? AND a = '\\':' AND enabled = ?");
+        QueryParser query = new QueryParser("SELECT * FROM Test WHERE id = ? AND a = '\\':' AND enabled = ?", voidTemplate);
         assertEquals(QueryParser.ParameterType.QUESTION_MARKS, query.getParameterType());
         List<ParameteredQueryPart> parts = query.getQueryParts();
         assertTrue(parts.get(0) instanceof StringQueryPart);
@@ -79,7 +84,7 @@ public class QueryParserTest {
 
     @Test
     public void testSimpleWithPosition() throws SQLSyntaxErrorException {
-        QueryParser query = new QueryParser("SELECT * FROM Test WHERE id = ?0 AND a = '\\':''' AND enabled = ?1 OR ready = ?1");
+        QueryParser query = new QueryParser("SELECT * FROM Test WHERE id = ?0 AND a = '\\':''' AND enabled = ?1 OR ready = ?1", voidTemplate);
         assertEquals(QueryParser.ParameterType.POSITIONAL, query.getParameterType());
         List<ParameteredQueryPart> parts = query.getQueryParts();
         assertTrue(parts.get(0) instanceof StringQueryPart);
@@ -107,7 +112,7 @@ public class QueryParserTest {
 
     @Test
     public void testMacro() throws SQLSyntaxErrorException {
-        QueryParser query = new QueryParser("SELECT * FROM Test WHERE #in{ id ; ? }", Collections.singletonList(new SingleInMacro()));
+        QueryParser query = new QueryParser("SELECT * FROM Test WHERE #in{ id ; ? }", singleInTemplate);
         assertEquals(QueryParser.ParameterType.QUESTION_MARKS, query.getParameterType());
         List<ParameteredQueryPart> parts = query.getQueryParts();
         assertTrue(parts.get(0) instanceof StringQueryPart);
@@ -144,7 +149,13 @@ public class QueryParserTest {
 
     private void testException(String sql, MacroFunction... macros) {
         try {
-            new QueryParser(sql, Arrays.asList(macros));
+            BeanDialect dialect = new BeanDialect(null);
+            for (MacroFunction macro : macros) {
+                dialect.addMacro(macro);
+            }
+
+            RelationalTemplate template = new RelationalTemplate(new DelegatingDataSource(),dialect);
+            new QueryParser(sql, template);
             assert false;
         } catch (SQLSyntaxErrorException ignored) {
             //

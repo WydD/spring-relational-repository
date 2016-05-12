@@ -175,7 +175,7 @@ You are therefore assured that no intermediate structure have been created befor
 Mapping can be customized using the ```@Column``` annotation. Obviously, you can change the name, but you can also change read-write operations.
  For instance if you want to map a complex object to a ```jsonb``` column in Postgres 9.4, here's how to do it.
 
-Declare your custom mapper (called here JsonBMapper) which is able to read and write an attribute.
+Declare your custom mapper (called here JsonBMapper) which is able to read and write an attributes.
 ```java
 public class JsonBMapper implements BeanAttributeMapper {
     // Jackson Mapper

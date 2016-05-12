@@ -4,7 +4,6 @@ import fr.petitl.relational.repository.query.macro.SingleInMacro.Executor;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.query.parametered.StringQueryPart;
 import fr.petitl.relational.repository.template.ColumnMapper;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.SQLException;
@@ -76,6 +75,6 @@ public class SingleInMacroTest {
     }
 
     private Executor createExecutor(String attribute, int parameterNumber) throws SQLSyntaxErrorException {
-        return (Executor) in.build(Arrays.asList(Collections.singletonList(new StringQueryPart(attribute)), Collections.singletonList(new SingleParameterQueryPart(parameterNumber))));
+        return (Executor) in.build(Arrays.asList(Collections.singletonList(new StringQueryPart(attribute)), Collections.singletonList(new SingleParameterQueryPart(parameterNumber))), null);
     }
 }

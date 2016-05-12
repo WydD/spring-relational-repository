@@ -15,6 +15,7 @@ import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.query.parametered.StringQueryPart;
 import fr.petitl.relational.repository.template.ColumnMapper;
+import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.util.SqlStringUtil;
 
 /**
@@ -32,7 +33,7 @@ public class SingleInMacro implements MacroFunction {
     }
 
     @Override
-    public ParameteredQueryPart build(List<List<ParameteredQueryPart>> arguments) throws SQLSyntaxErrorException {
+    public ParameteredQueryPart build(List<List<ParameteredQueryPart>> arguments, RelationalTemplate template) throws SQLSyntaxErrorException {
         StringQueryPart attributeName = MacroUtils.extractString(arguments, 0);
         SingleParameterQueryPart parameter = MacroUtils.extractParameter(arguments, 1);
         return new Executor(attributeName.getFragment(), parameter.getRequiredParameters());

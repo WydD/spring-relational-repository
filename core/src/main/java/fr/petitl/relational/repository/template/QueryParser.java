@@ -25,6 +25,7 @@ public class QueryParser {
     private int i = 0;
     private int length;
     private String sql;
+    private RelationalTemplate template;
     private Map<String, MacroFunction> allowedMacros;
     private boolean readable;
     private Map<String, Integer> namedParameterIndex = new HashMap<>();
@@ -32,14 +33,11 @@ public class QueryParser {
     private List<ParameteredQueryPart> queryParts = new LinkedList<>();
     private ParameterType parameterType = ParameterType.NONE;
 
-    public QueryParser(String sql) throws SQLSyntaxErrorException {
-        this(sql, Collections.emptyList());
-    }
-
-    public QueryParser(String sql, List<MacroFunction> allowedMacros) throws SQLSyntaxErrorException {
+    public QueryParser(String sql, RelationalTemplate template) throws SQLSyntaxErrorException {
         this.sql = sql;
+        this.template = template;
         // indexed macros
-        this.allowedMacros = allowedMacros.stream().collect(Collectors.toMap(MacroFunction::name, it -> it));
+        this.allowedMacros = template.getAvailableMacros().stream().collect(Collectors.toMap(it -> it.name() + "/" + it.numberOfParameters(), it -> it));
         length = sql.length();
         readable = length > 0;
         parse();
@@ -73,15 +71,16 @@ public class QueryParser {
             } else if (c == '#') {
                 plain = appendStringPart(queryParts, plain);
                 String macroName = ident();
-                MacroFunction macro = allowedMacros.get(macroName.toLowerCase());
-                if (macro == null) {
-                    throw new SQLSyntaxErrorException("Unknown macro " + macroName);
-                }
                 List<List<ParameteredQueryPart>> parameters = parameters();
-                if (macro.numberOfParameters() != parameters.size()) {
-                    throw new SQLSyntaxErrorException("Invalid number of parameters give to the macro "+macro.name()+" expected "+macro.numberOfParameters()+" given "+parameters.size());
+                MacroFunction macro = allowedMacros.get(macroName.toLowerCase() + "/" + parameters.size());
+                if (macro == null) {
+                    // Try variable size
+                    macro = allowedMacros.get(macroName.toLowerCase() + "/-1");
+                    if (macro == null) {
+                        throw new SQLSyntaxErrorException("No macro matches signature " + macroName + "/" + parameters.size());
+                    }
                 }
-                queryParts.add(macro.build(parameters));
+                queryParts.add(macro.build(parameters, template));
             } else if (c == ':') {
                 plain = appendStringPart(queryParts, plain);
                 String ident = ident();
