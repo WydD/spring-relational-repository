@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 import fr.petitl.relational.repository.dialect.BeanDialect;
+import fr.petitl.relational.repository.query.macro.CompositeInMacro;
 import fr.petitl.relational.repository.query.macro.MacroFunction;
 import fr.petitl.relational.repository.query.macro.SingleInMacro;
 import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
@@ -22,7 +23,7 @@ import static org.junit.Assert.*;
 public class QueryParserTest {
 
     RelationalTemplate voidTemplate = new RelationalTemplate(new DelegatingDataSource(), new BeanDialect(null));
-    RelationalTemplate singleInTemplate = new RelationalTemplate(new DelegatingDataSource(), new BeanDialect(null).addMacro(new SingleInMacro()));
+    RelationalTemplate singleInTemplate = new RelationalTemplate(new DelegatingDataSource(), new BeanDialect(null).addMacro(new SingleInMacro()).addMacro(new CompositeInMacro()));
 
     @Test
     public void testSimpleWithout() throws SQLSyntaxErrorException {
@@ -123,6 +124,21 @@ public class QueryParserTest {
 
         SingleInMacro.Executor macroPart = (SingleInMacro.Executor) parts.get(1);
         assertEquals("id", macroPart.getAttribute());
+
+        assertEquals(2, parts.size());
+
+        query = new QueryParser("SELECT * FROM Test WHERE #in{ id ; pos=position ; :list }", singleInTemplate);
+        assertEquals(QueryParser.ParameterType.NAMED_PARAMETER, query.getParameterType());
+        parts = query.getQueryParts();
+        assertTrue(parts.get(0) instanceof StringQueryPart);
+        assertEquals("SELECT * FROM Test WHERE ", parts.get(0).getFragment());
+
+        assertTrue(parts.get(1) instanceof CompositeInMacro.Executor);
+        assertArrayEquals(new int[]{0}, parts.get(1).getRequiredParameters());
+
+        CompositeInMacro.Executor compositeMacroPart = (CompositeInMacro.Executor) parts.get(1);
+        assertEquals(Arrays.asList("id", "pos"), compositeMacroPart.getAttributes());
+        assertEquals(Arrays.asList("id", "position"), compositeMacroPart.getTargetAttributes());
 
         assertEquals(2, parts.size());
     }

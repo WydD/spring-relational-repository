@@ -105,7 +105,7 @@ public class CompositeInMacroTest {
 
     @Test
     public void testExecutorWithBeanMappingAndAliases() throws SQLException {
-        Executor executor = createExecutor(4, "position:pos", "ref:id");
+        Executor executor = createExecutor(4, "position=pos", "ref=id");
         List<A> ids = Arrays.asList(new A("hey", 1), new A("zen", -45));
 
         executor.setParameter(4, ids, null);

@@ -59,7 +59,7 @@ public class CompositeInMacro implements MacroFunction {
             this.targetAttributes = new ArrayList<>(attributeSize);
             this.attributes = new ArrayList<>(attributeSize);
             for (String attribute : attributes) {
-                String[] split = attribute.split("\\s*:\\s*");
+                String[] split = attribute.split("\\s*=\\s*");
                 String target;
                 if (split.length == 1) {
                     target = attribute;
@@ -67,7 +67,7 @@ public class CompositeInMacro implements MacroFunction {
                     attribute = split[0];
                     target = split[1];
                 } else {
-                    throw new SQLSyntaxErrorException("Invalid format for attribute '"+attribute+"', requested {attribute}[:{targetAttribute}]");
+                    throw new SQLSyntaxErrorException("Invalid format for attribute '"+attribute+"', requested {attribute}[={targetAttribute}]");
                 }
                 this.attributes.add(attribute);
                 targetAttributes.add(target);
@@ -144,6 +144,10 @@ public class CompositeInMacro implements MacroFunction {
 
         public List<String> getAttributes() {
             return attributes;
+        }
+
+        public List<String> getTargetAttributes() {
+            return targetAttributes;
         }
 
         @Override
