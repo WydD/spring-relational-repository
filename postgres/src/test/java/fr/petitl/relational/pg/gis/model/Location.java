@@ -5,6 +5,8 @@ import fr.petitl.relational.repository.annotation.Table;
 import org.postgis.MultiPolygon;
 import org.postgis.Point;
 
+import java.util.Objects;
+
 /**
  * Created by loic on 12/06/15.
  */
@@ -53,5 +55,21 @@ public class Location {
 
     public void setReference(Point reference) {
         this.reference = reference;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Location location = (Location) o;
+        return Objects.equals(id, location.id) &&
+                Objects.equals(label, location.label) &&
+                Objects.equals(geometry, location.geometry) &&
+                Objects.equals(reference, location.reference);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, label, geometry, reference);
     }
 }

@@ -47,10 +47,10 @@ public class CompositeInMacro implements MacroFunction {
     }
 
     public static class Executor extends ListParameterExecutor {
-        private final List<String> attributes;
-        private final List<String> targetAttributes;
-        private final RelationalTemplate template;
-        private int attributeSize;
+        protected final List<String> attributes;
+        protected final List<String> targetAttributes;
+        protected final RelationalTemplate template;
+        protected int attributeSize;
 
         public Executor(List<String> attributes, int[] parameters, RelationalTemplate template) throws SQLSyntaxErrorException {
             super(parameters);

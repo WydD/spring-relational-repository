@@ -1,5 +1,6 @@
 package fr.petitl.relational.pg;
 
+import fr.petitl.relational.pg.macro.CompositeTupleInMacro;
 import fr.petitl.relational.repository.dialect.BeanDialect;
 import fr.petitl.relational.repository.dialect.generic.CompositeAsTupleSQLGeneration;
 import fr.petitl.relational.repository.dialect.paging.FetchFirstPaging;
@@ -13,6 +14,6 @@ public class PGDialectProvider {
      */
     public static BeanDialect get() {
         final BeanAttributeMapper attributeMapper = new PGAttributeMapper();
-        return new BeanDialect(CompositeAsTupleSQLGeneration::new, new FetchFirstPaging(true), attributeMapper, attributeMapper).addMacro(new SingleInMacro());
+        return new BeanDialect(CompositeAsTupleSQLGeneration::new, new FetchFirstPaging(true), attributeMapper, attributeMapper).addMacro(new SingleInMacro()).addMacro(new CompositeTupleInMacro());
     }
 }

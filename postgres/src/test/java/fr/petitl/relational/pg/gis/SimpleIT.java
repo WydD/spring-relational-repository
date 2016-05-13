@@ -5,6 +5,7 @@ import fr.petitl.relational.pg.gis.model.Location;
 import fr.petitl.relational.pg.gis.repository.LocationRepository;
 import fr.petitl.relational.repository.EnableRelationalRepositories;
 import fr.petitl.relational.repository.template.RelationalTemplate;
+import fr.petitl.relational.repository.template.query.SelectQuery;
 import org.junit.Test;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
@@ -19,6 +20,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.stream.Stream;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = SimpleIT.BaseConfiguration.class)
@@ -49,6 +52,9 @@ public class SimpleIT {
     @Autowired
     private LocationRepository repository;
 
+    @Autowired
+    private RelationalTemplate template;
+
     @Test
     public void testFindOne() {
         final Location paris = repository.findOne("75056");
@@ -78,5 +84,15 @@ public class SimpleIT {
         Assert.assertNotNull(paris);
         final Location notParis = repository.findAt(2.377421, 46.861208);
         Assert.assertNull(notParis);
+    }
+
+    @Test
+    public void testCompositeIn() {
+        SelectQuery<Location> query = template.createQuery("SELECT * FROM Location WHERE #in{id;label;?0}", Location.class);
+        query.setParameter(0, Stream.of((Object)new Object[]{"75056", "Paris"}));
+        List<Location> list = query.list();
+        Assert.assertNotNull(list);
+        Assert.assertEquals(1, list.size());
+        Assert.assertEquals(repository.findOne("75056"), list.get(0));
     }
 }
