@@ -16,7 +16,6 @@ import fr.petitl.relational.repository.fk.domain.Location;
 import fr.petitl.relational.repository.fk.repository.CountryRepository;
 import fr.petitl.relational.repository.fk.repository.EventRepository;
 import fr.petitl.relational.repository.fk.repository.LocationRepository;
-import fr.petitl.relational.repository.query.macro.SingleInMacro;
 import fr.petitl.relational.repository.repository.FKResolver;
 import fr.petitl.relational.repository.template.TemplateWithCounter;
 import org.junit.After;

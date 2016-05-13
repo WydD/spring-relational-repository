@@ -1,6 +1,6 @@
-package fr.petitl.relational.repository.query.macro;
+package fr.petitl.relational.repository.query.macro.in;
 
-import fr.petitl.relational.repository.query.macro.SingleInMacro.Executor;
+import fr.petitl.relational.repository.query.macro.in.SingleInMacro.Executor;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.query.parametered.StringQueryPart;
 import fr.petitl.relational.repository.template.ColumnMapper;
@@ -21,10 +21,10 @@ public class SingleInMacroTest {
         Executor executor = createExecutor("id", 4);
         assertArrayEquals(new int[]{4}, executor.getRequiredParameters());
         assertFalse(executor.isStatic());
-        Map<Integer, Integer> settedValues = new HashMap<>();
+        Map<Integer, Integer> setValues = new HashMap<>();
 
         List<Integer> ids = Arrays.asList(1, 2, 3, 4, 5);
-        Function<Object, ColumnMapper> setter = it -> (ps, offset) -> settedValues.put(offset, (Integer) it);
+        Function<Object, ColumnMapper> setter = it -> (ps, offset) -> setValues.put(offset, (Integer) it);
         try {
             executor.setParameter(2, ids, setter);
             assert false;
@@ -39,18 +39,18 @@ public class SingleInMacroTest {
         // Prepare the request, check that we have offset + 5
         assertEquals(14, executor.prepare(null, 9));
 
-        assertEquals(Integer.valueOf(1), settedValues.get(9));
-        assertEquals(Integer.valueOf(2), settedValues.get(10));
-        assertEquals(Integer.valueOf(3), settedValues.get(11));
-        assertEquals(Integer.valueOf(4), settedValues.get(12));
-        assertEquals(Integer.valueOf(5), settedValues.get(13));
+        assertEquals(Integer.valueOf(1), setValues.get(9));
+        assertEquals(Integer.valueOf(2), setValues.get(10));
+        assertEquals(Integer.valueOf(3), setValues.get(11));
+        assertEquals(Integer.valueOf(4), setValues.get(12));
+        assertEquals(Integer.valueOf(5), setValues.get(13));
     }
 
-    public void testExecutorWithTypes(Function<List<Integer>, Object> converter) throws SQLException {
+    public void testListParameterExecutor(Function<List<Integer>, Object> converter) throws SQLException {
         Executor executor = createExecutor("id", 4);
-        Map<Integer, Integer> settedValues = new HashMap<>();
+        Map<Integer, Integer> setValues = new HashMap<>();
         List<Integer> ids = Arrays.asList(1, 2, 3, 4, 5);
-        Function<Object, ColumnMapper> setter = it -> (ps, offset) -> settedValues.put(offset, (Integer) it);
+        Function<Object, ColumnMapper> setter = it -> (ps, offset) -> setValues.put(offset, (Integer) it);
         executor.setParameter(4, converter.apply(ids), setter);
 
         assertEquals("id IN (?, ?, ?, ?, ?)", executor.getFragment());
@@ -58,20 +58,20 @@ public class SingleInMacroTest {
         // Prepare the request, check that we have offset + 5
         assertEquals(14, executor.prepare(null, 9));
 
-        assertEquals(Integer.valueOf(1), settedValues.get(9));
-        assertEquals(Integer.valueOf(2), settedValues.get(10));
-        assertEquals(Integer.valueOf(3), settedValues.get(11));
-        assertEquals(Integer.valueOf(4), settedValues.get(12));
-        assertEquals(Integer.valueOf(5), settedValues.get(13));
+        assertEquals(Integer.valueOf(1), setValues.get(9));
+        assertEquals(Integer.valueOf(2), setValues.get(10));
+        assertEquals(Integer.valueOf(3), setValues.get(11));
+        assertEquals(Integer.valueOf(4), setValues.get(12));
+        assertEquals(Integer.valueOf(5), setValues.get(13));
     }
 
 
     @Test
-    public void testExecutorWithTypes() throws SQLException {
-        testExecutorWithTypes(Collection::stream);
-        testExecutorWithTypes(List::toArray);
-        testExecutorWithTypes(ids -> ids.toArray(new Integer[ids.size()]));
-        testExecutorWithTypes(ids -> new int[]{1,2,3,4,5});
+    public void testListParameterExecutor() throws SQLException {
+        testListParameterExecutor(Collection::stream);
+        testListParameterExecutor(List::toArray);
+        testListParameterExecutor(ids -> ids.toArray(new Integer[ids.size()]));
+        testListParameterExecutor(ids -> new int[]{1,2,3,4,5});
     }
 
     private Executor createExecutor(String attribute, int parameterNumber) throws SQLSyntaxErrorException {

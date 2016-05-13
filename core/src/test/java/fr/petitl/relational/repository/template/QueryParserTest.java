@@ -2,13 +2,12 @@ package fr.petitl.relational.repository.template;
 
 import java.sql.SQLSyntaxErrorException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import fr.petitl.relational.repository.dialect.BeanDialect;
-import fr.petitl.relational.repository.query.macro.CompositeInMacro;
+import fr.petitl.relational.repository.query.macro.in.CompositeInMacro;
 import fr.petitl.relational.repository.query.macro.MacroFunction;
-import fr.petitl.relational.repository.query.macro.SingleInMacro;
+import fr.petitl.relational.repository.query.macro.in.SingleInMacro;
 import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.query.parametered.StringQueryPart;

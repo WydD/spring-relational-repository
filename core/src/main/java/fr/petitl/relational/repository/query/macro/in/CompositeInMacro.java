@@ -1,5 +1,7 @@
-package fr.petitl.relational.repository.query.macro;
+package fr.petitl.relational.repository.query.macro.in;
 
+import fr.petitl.relational.repository.query.macro.MacroFunction;
+import fr.petitl.relational.repository.query.macro.MacroUtils;
 import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.template.ColumnMapper;
@@ -44,16 +46,14 @@ public class CompositeInMacro implements MacroFunction {
         return new Executor(attributes, parameter.getRequiredParameters(), template);
     }
 
-    public static class Executor implements ParameteredQueryPart {
+    public static class Executor extends ListParameterExecutor {
         private final List<String> attributes;
         private final List<String> targetAttributes;
-        private final int[] parameters;
         private final RelationalTemplate template;
-        private Collection<Object> toSet;
-        private Function<Object, ColumnMapper> defaultSetter;
         private int attributeSize;
 
         public Executor(List<String> attributes, int[] parameters, RelationalTemplate template) throws SQLSyntaxErrorException {
+            super(parameters);
             this.template = template;
             this.attributeSize = attributes.size();
             this.targetAttributes = new ArrayList<>(attributeSize);
@@ -72,36 +72,6 @@ public class CompositeInMacro implements MacroFunction {
                 this.attributes.add(attribute);
                 targetAttributes.add(target);
             }
-
-            this.parameters = parameters;
-        }
-
-        @Override
-        public void setParameter(int parameterNumber, Object parameter, Function<Object, ColumnMapper> defaultSetter) {
-            if (parameterNumber != parameters[0]) {
-                throw new IllegalArgumentException("Trying to set a parameter number that is configured to be this one");
-            }
-            this.defaultSetter = defaultSetter;
-            if (parameter instanceof Collection) {
-                toSet = (Collection) parameter;
-            } else if (parameter.getClass().isArray()) {
-                int length = Array.getLength(parameter);
-                toSet = new ArrayList<>(length);
-                for (int i = 0; i < length; i++) {
-                    toSet.add(Array.get(parameter, i));
-                }
-            } else if (parameter instanceof Stream) {
-                Stream<?> asStream = (Stream) parameter;
-                toSet = asStream.collect(Collectors.toList());
-                asStream.close();
-            } else {
-                throw new IllegalArgumentException("Unknown parameter class as parameter of the 'IN' macro");
-            }
-        }
-
-        @Override
-        public void setParameter(int parameterNumber, ColumnMapper mapper) {
-            throw new IllegalStateException("Impossible to call setParameter with a straight ColumnMapper");
         }
 
         @Override
@@ -130,16 +100,6 @@ public class CompositeInMacro implements MacroFunction {
             }
 
             return offset;
-        }
-
-        @Override
-        public boolean isStatic() {
-            return false;
-        }
-
-        @Override
-        public int[] getRequiredParameters() {
-            return parameters;
         }
 
         public List<String> getAttributes() {

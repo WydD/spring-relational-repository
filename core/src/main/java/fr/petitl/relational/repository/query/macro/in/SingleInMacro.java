@@ -1,4 +1,4 @@
-package fr.petitl.relational.repository.query.macro;
+package fr.petitl.relational.repository.query.macro.in;
 
 import java.lang.reflect.Array;
 import java.sql.PreparedStatement;
@@ -11,6 +11,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import fr.petitl.relational.repository.query.macro.MacroFunction;
+import fr.petitl.relational.repository.query.macro.MacroUtils;
 import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.query.parametered.StringQueryPart;
@@ -39,43 +41,12 @@ public class SingleInMacro implements MacroFunction {
         return new Executor(attributeName.getFragment(), parameter.getRequiredParameters());
     }
 
-    public static class Executor implements ParameteredQueryPart {
+    public static class Executor extends ListParameterExecutor {
         private final String attribute;
-        private final int[] parameters;
-        private Collection<Object> toSet;
-        private Function<Object, ColumnMapper> defaultSetter;
 
         public Executor(String attribute, int[] parameters) {
+            super(parameters);
             this.attribute = attribute;
-            this.parameters = parameters;
-        }
-
-        @Override
-        public void setParameter(int parameterNumber, Object parameter, Function<Object, ColumnMapper> defaultSetter) {
-            if (parameterNumber != parameters[0]) {
-                throw new IllegalArgumentException("Trying to set a parameter number that is configured to be this one");
-            }
-            this.defaultSetter = defaultSetter;
-            if (parameter instanceof Collection) {
-                toSet = (Collection) parameter;
-            } else if (parameter.getClass().isArray()) {
-                int length = Array.getLength(parameter);
-                toSet = new ArrayList<>(length);
-                for (int i = 0; i < length; i++) {
-                    toSet.add(Array.get(parameter, i));
-                }
-            } else if (parameter instanceof Stream) {
-                Stream<?> asStream = (Stream) parameter;
-                toSet = asStream.collect(Collectors.toList());
-                asStream.close();
-            } else {
-                throw new IllegalArgumentException("Unknown parameter class as parameter of the 'IN' macro");
-            }
-        }
-
-        @Override
-        public void setParameter(int parameterNumber, ColumnMapper mapper) {
-            throw new IllegalStateException("Impossible to call setParameter with a straight ColumnMapper");
         }
 
         @Override
@@ -87,16 +58,6 @@ public class SingleInMacro implements MacroFunction {
             }
 
             return offset;
-        }
-
-        @Override
-        public boolean isStatic() {
-            return false;
-        }
-
-        @Override
-        public int[] getRequiredParameters() {
-            return parameters;
         }
 
         public String getAttribute() {

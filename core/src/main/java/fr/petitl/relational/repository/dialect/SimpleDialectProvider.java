@@ -2,7 +2,7 @@ package fr.petitl.relational.repository.dialect;
 
 import fr.petitl.relational.repository.dialect.generic.CompositeAsTupleSQLGeneration;
 import fr.petitl.relational.repository.dialect.paging.*;
-import fr.petitl.relational.repository.query.macro.SingleInMacro;
+import fr.petitl.relational.repository.query.macro.in.SingleInMacro;
 
 /**
  *

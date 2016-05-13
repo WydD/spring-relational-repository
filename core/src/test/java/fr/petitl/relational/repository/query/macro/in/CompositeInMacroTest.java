@@ -1,8 +1,8 @@
-package fr.petitl.relational.repository.query.macro;
+package fr.petitl.relational.repository.query.macro.in;
 
 import fr.petitl.relational.repository.annotation.Column;
 import fr.petitl.relational.repository.dialect.BeanDialect;
-import fr.petitl.relational.repository.query.macro.CompositeInMacro.Executor;
+import fr.petitl.relational.repository.query.macro.in.CompositeInMacro.Executor;
 import fr.petitl.relational.repository.query.parametered.ParameteredQueryPart;
 import fr.petitl.relational.repository.query.parametered.SingleParameterQueryPart;
 import fr.petitl.relational.repository.query.parametered.StringQueryPart;
@@ -40,15 +40,15 @@ public class CompositeInMacroTest {
     public static class Writer implements BeanAttributeWriter {
         @Override
         public void writeAttribute(PreparedStatement ps, int column, Object o, Field sourceField) throws SQLException {
-            settedValues.put(column, o);
+            setValues.put(column, o);
         }
     }
 
-    public static Map<Integer, Object> settedValues = new HashMap<>();
+    public static Map<Integer, Object> setValues = new HashMap<>();
 
     @Before
     public void before() {
-        settedValues.clear();
+        setValues.clear();
     }
 
     CompositeInMacro in = new CompositeInMacro();
@@ -61,7 +61,7 @@ public class CompositeInMacroTest {
         assertFalse(executor.isStatic());
 
         List<Object[]> ids = Arrays.asList(new Object[]{"hey", 1}, new Object[]{"ho", 2}, new Object[]{"sup", 7});
-        Function<Object, ColumnMapper> setter = it -> (ps, offset) -> settedValues.put(offset, it);
+        Function<Object, ColumnMapper> setter = it -> (ps, offset) -> setValues.put(offset, it);
         try {
             executor.setParameter(2, ids, setter);
             assert false;
@@ -77,12 +77,12 @@ public class CompositeInMacroTest {
         // Prepare the request, check that we have offset + 6 (3*2)
         assertEquals(15, executor.prepare(null, 9));
 
-        assertEquals("hey", settedValues.get(9));
-        assertEquals(1, settedValues.get(10));
-        assertEquals("ho", settedValues.get(11));
-        assertEquals(2, settedValues.get(12));
-        assertEquals("sup", settedValues.get(13));
-        assertEquals(7, settedValues.get(14));
+        assertEquals("hey", setValues.get(9));
+        assertEquals(1, setValues.get(10));
+        assertEquals("ho", setValues.get(11));
+        assertEquals(2, setValues.get(12));
+        assertEquals("sup", setValues.get(13));
+        assertEquals(7, setValues.get(14));
     }
 
     @Test
@@ -97,10 +97,10 @@ public class CompositeInMacroTest {
         // Prepare the request, check that we have offset + 5
         assertEquals(9+4, executor.prepare(null, 9));
 
-        assertEquals(1, settedValues.get(9));
-        assertEquals("hey", settedValues.get(10));
-        assertEquals(-45, settedValues.get(11));
-        assertEquals("zen", settedValues.get(12));
+        assertEquals(1, setValues.get(9));
+        assertEquals("hey", setValues.get(10));
+        assertEquals(-45, setValues.get(11));
+        assertEquals("zen", setValues.get(12));
     }
 
     @Test
@@ -115,19 +115,19 @@ public class CompositeInMacroTest {
         // Prepare the request, check that we have offset + 5
         assertEquals(9+4, executor.prepare(null, 9));
 
-        assertEquals(1, settedValues.get(9));
-        assertEquals("hey", settedValues.get(10));
-        assertEquals(-45, settedValues.get(11));
-        assertEquals("zen", settedValues.get(12));
+        assertEquals(1, setValues.get(9));
+        assertEquals("hey", setValues.get(10));
+        assertEquals(-45, setValues.get(11));
+        assertEquals("zen", setValues.get(12));
     }
 
 /*
     @Test
-    public void testExecutorWithTypes() throws SQLException {
-        testExecutorWithTypes(Collection::stream);
-        testExecutorWithTypes(List::toArray);
-        testExecutorWithTypes(ids -> ids.toArray(new Integer[ids.size()]));
-        testExecutorWithTypes(ids -> new int[]{1,2,3,4,5});
+    public void testListParameterExecutor() throws SQLException {
+        testListParameterExecutor(Collection::stream);
+        testListParameterExecutor(List::toArray);
+        testListParameterExecutor(ids -> ids.toArray(new Integer[ids.size()]));
+        testListParameterExecutor(ids -> new int[]{1,2,3,4,5});
     }*/
 
     private Executor createExecutor(int parameterNumber, String... attribute) throws SQLSyntaxErrorException {

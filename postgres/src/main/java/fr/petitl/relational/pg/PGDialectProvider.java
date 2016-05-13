@@ -3,7 +3,7 @@ package fr.petitl.relational.pg;
 import fr.petitl.relational.repository.dialect.BeanDialect;
 import fr.petitl.relational.repository.dialect.generic.CompositeAsTupleSQLGeneration;
 import fr.petitl.relational.repository.dialect.paging.FetchFirstPaging;
-import fr.petitl.relational.repository.query.macro.SingleInMacro;
+import fr.petitl.relational.repository.query.macro.in.SingleInMacro;
 import fr.petitl.relational.repository.template.bean.BeanAttributeMapper;
 
 public class PGDialectProvider {
