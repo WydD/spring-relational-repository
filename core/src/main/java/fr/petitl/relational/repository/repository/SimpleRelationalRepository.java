@@ -82,11 +82,12 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
     }
 
     @Override
-    public int deleteByIds(Stream<ID> idsStream) {
-        Set<ID> ids = idsStream.collect(Collectors.toSet());
-        UpdateQuery query = template.createQuery(sql.deleteAll(ids.size()));
-        setIds(ids, query);
-        return query.execute();
+    public int deleteByIds(Stream<ID> ids) {
+        Set<ID> idList = ids.collect(Collectors.toSet());
+        if (idList.isEmpty()) {
+            return 0;
+        }
+        return template.createQuery(sql.deleteByIds()).setParameter(0, idList).execute();
     }
 
     @Override
@@ -177,18 +178,7 @@ public class SimpleRelationalRepository<T, ID extends Serializable> implements R
         if (idList.isEmpty()) {
             return apply.apply(Stream.empty());
         }
-        SelectQuery<T> query = query(sql.selectAll(idList.size()), mappingData.getMapper());
-        setIds(idList, query);
-        return query.fetch(apply);
-    }
-
-    protected void setIds(Set<ID> idList, AbstractQuery query) {
-        int pkSize = entityInformation.getPkFields().size();
-        int c = 0;
-        for (ID id : idList) {
-            applyUnmapper(id, query, entityInformation.getIdUnmapper(), c);
-            c += pkSize;
-        }
+        return query(sql.selectByIds(), mappingData.getMapper()).setParameter(0, idList).fetch(apply);
     }
 
     @Override

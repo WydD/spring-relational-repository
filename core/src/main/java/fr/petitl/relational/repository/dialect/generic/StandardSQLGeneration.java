@@ -29,6 +29,7 @@ public class StandardSQLGeneration<T, ID extends Serializable> implements BeanSQ
     protected final String whereId;
     protected final String fromTable;
     protected final String idColumns;
+    protected final String whereIdsIn;
 
     public static final String SELECT = "SELECT ";
     public static final String FROM = " FROM ";
@@ -55,6 +56,7 @@ public class StandardSQLGeneration<T, ID extends Serializable> implements BeanSQ
 
         idClause = entityInformation.getPkFields().stream().map(it -> it.columnName + " = ?").collect(Collectors.joining(" AND "));
         idColumns = entityInformation.getPkFields().stream().map(it -> it.columnName).collect(Collectors.joining(", "));
+        whereIdsIn = WHERE + "#in{"+idColumns.replace(',',';')+"; ?}";
 
         Collection<FieldMappingData> fields = mappingData.getFieldData();
         String updateSet = fields.stream().filter(it -> !pkFields.contains(it)).map(it -> it.columnName + " = ?").collect(Collectors.joining(", "));
@@ -112,43 +114,13 @@ public class StandardSQLGeneration<T, ID extends Serializable> implements BeanSQ
         return update;
     }
 
-    protected String simpleIdIn(int count) {
-        return idColumns + " IN (" + questionMarks(count) + ")";
+    @Override
+    public String selectByIds() {
+        return SELECT_STAR + fromTable + whereIdsIn;
     }
 
     @Override
-    public String selectAll(int idCount) {
-        return SELECT_STAR + multiIdFromWhere(idCount);
-    }
-
-    @Override
-    public String deleteAll(int idCount) {
-        return DELETE + multiIdFromWhere(idCount);
-    }
-
-    private String multiIdFromWhere(int idCount) {
-        if (compositeKey) {
-            return fromTable + WHERE + compositeIdIn(idCount);
-        } else {
-            return fromTable + WHERE + simpleIdIn(idCount);
-        }
-    }
-
-    protected String compositeIdIn(int count) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < count; i++) {
-            if (i > 0)
-                builder.append(" OR ");
-            builder.append("(");
-            for (Iterator<FieldMappingData> iterator = entityInformation.getPkFields().iterator(); iterator.hasNext(); ) {
-                FieldMappingData fieldData = iterator.next();
-                builder.append(fieldData.columnName);
-                builder.append(" = ?");
-                if (iterator.hasNext())
-                    builder.append(" AND ");
-            }
-            builder.append(")");
-        }
-        return builder.toString();
+    public String deleteByIds() {
+        return DELETE + fromTable + whereIdsIn;
     }
 }

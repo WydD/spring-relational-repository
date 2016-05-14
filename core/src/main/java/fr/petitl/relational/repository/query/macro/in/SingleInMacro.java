@@ -67,7 +67,7 @@ public class SingleInMacro implements MacroFunction {
         @Override
         public String getFragment() {
             if (toSet.isEmpty()) {
-                return "1=1";
+                return "1=0";
             }
 
             return attribute + " IN (" + SqlStringUtil.questionMarks(toSet.size()) + ")";

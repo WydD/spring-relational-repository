@@ -113,7 +113,7 @@ public class CompositeInMacro implements MacroFunction {
         @Override
         public String getFragment() {
             if (toSet.isEmpty()) {
-                return "1=1";
+                return "1=0";
             }
             String attributes = this.attributes.stream().map(it -> it + " = ?").collect(Collectors.joining(" AND "));
             if (toSet.size() == 1) {
