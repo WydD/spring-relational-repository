@@ -1,6 +1,6 @@
 package fr.petitl.relational.repository.repository;
 
-import fr.petitl.relational.repository.util.WindowedSpliterator;
+import fr.petitl.relational.repository.util.StreamUtils;
 
 import java.io.Serializable;
 import java.util.*;
@@ -8,7 +8,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public class FKResolver<E, F> {
     private final Function<E, F> create;
@@ -28,8 +27,7 @@ public class FKResolver<E, F> {
     }
 
     public Stream<F> resolve(Stream<E> stream, int bulkSize) {
-        Stream<List<E>> windowedStream = StreamSupport.stream(new WindowedSpliterator<>(stream.spliterator(), bulkSize, bulkSize), false);
-        return windowedStream.map(this::doResolve).flatMap(it -> it);
+        return StreamUtils.bulk(stream, bulkSize).map(this::doResolve).flatMap(it -> it);
     }
 
     private Stream<F> doResolve(List<E> orig) {
@@ -49,12 +47,20 @@ public class FKResolver<E, F> {
             this.create = create;
         }
 
-        public <ID extends Serializable, T> Builder<E, F> add(Function<E, ID> fkGetter, RelationalRepository<T, ID> rel, BiConsumer<F, T> fkSetter) {
+        public <ID extends Serializable, T> Builder<E, F> add(Function<E, ID> fkGetter, RelationalRepository<T, ID> rel, BiConsumer<F, List<T>> fkSetter) {
             return add(fkGetter, rel, fkSetter, false);
         }
 
-        public <ID extends Serializable, T> Builder<E, F> add(Function<E, ID> fkGetter, RelationalRepository<T, ID> rel, BiConsumer<F, T> fkSetter, boolean setIfNull) {
-            steps.add(new ResolveStep<>(fkGetter, rel, fkSetter, setIfNull));
+        public <ID extends Serializable, T> Builder<E, F> add(Function<E, ID> fkGetter, RelationalRepository<T, ID> rel, BiConsumer<F, List<T>> fkSetter, boolean setIfNull) {
+            return add(fkGetter, rel, rel.pkGetter(), fkSetter, setIfNull);
+        }
+
+        public <ID extends Serializable, T> Builder<E, F> add(Function<E, ID> fkGetter, RepositoryResolution<T, ID> resolution, Function<T, ID> pkGetter, BiConsumer<F, List<T>> fkSetter) {
+            return add(fkGetter, resolution, pkGetter, fkSetter, false);
+        }
+
+        public <ID extends Serializable, T> Builder<E, F> add(Function<E, ID> fkGetter, RepositoryResolution<T, ID> resolution, Function<T, ID> pkGetter, BiConsumer<F, List<T>> fkSetter, boolean setIfNull) {
+            steps.add(new ResolveStep<>(fkGetter, resolution, pkGetter, fkSetter, setIfNull));
             return this;
         }
 
@@ -65,16 +71,18 @@ public class FKResolver<E, F> {
 
     private static class ResolveStep<E, F, T, ID extends Serializable> {
         public Function<E, ID> fkGetter;
-        public RelationalRepository<T, ID> rel;
-        public BiConsumer<F, T> fkSetter;
-        public Map<Object, T> resolved;
+        public RepositoryResolution<T, ID> resolution;
+        public BiConsumer<F, List<T>> fkSetter;
+        public Map<Object, List<T>> resolved;
         public boolean setIfNull;
+        public Function<T, Object> pkGetter;
 
-        public ResolveStep(Function<E, ID> fkGetter, RelationalRepository<T, ID> rel, BiConsumer<F, T> fkSetter, boolean setIfNull) {
+        public ResolveStep(Function<E, ID> fkGetter, RepositoryResolution<T, ID> resolution, Function<T, ID> pkGetter, BiConsumer<F, List<T>> fkSetter, boolean setIfNull) {
             this.fkGetter = fkGetter;
-            this.rel = rel;
+            this.resolution = resolution;
             this.fkSetter = fkSetter;
             this.setIfNull = setIfNull;
+            this.pkGetter = it -> ensureId(pkGetter.apply(it));
         }
 
         public void set(E e, F f) {
@@ -84,10 +92,9 @@ public class FKResolver<E, F> {
                     fkSetter.accept(f, null);
                 return;
             }
-            T result = resolved.get(ensureId(id));
+            List<T> result = resolved.get(ensureId(id));
             if (result == null) {
-                if (setIfNull)
-                    fkSetter.accept(f, null);
+                fkSetter.accept(f, new LinkedList<>());
                 return;
             }
             fkSetter.accept(f, result);
@@ -102,7 +109,7 @@ public class FKResolver<E, F> {
         }
 
         public void resolve(List<E> orig) {
-            resolved = rel.resolveFK(orig.stream(), fkGetter, stream -> stream.collect(Collectors.toMap(it -> ensureId(rel.pkGetter().apply(it)), it -> it)));
+            resolved = resolution.findAll(orig.stream().map(fkGetter).filter(it -> it != null), StreamUtils.asIndexMultiple(pkGetter));
         }
     }
 

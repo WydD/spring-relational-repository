@@ -2,8 +2,8 @@ package fr.petitl.relational.repository.fk;
 
 import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,6 +18,7 @@ import fr.petitl.relational.repository.fk.repository.EventRepository;
 import fr.petitl.relational.repository.fk.repository.LocationRepository;
 import fr.petitl.relational.repository.repository.FKResolver;
 import fr.petitl.relational.repository.template.TemplateWithCounter;
+import fr.petitl.relational.repository.util.StreamUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,8 +37,6 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(classes = {FkRepositoryTest.BaseConfiguration.class})
 public class FkRepositoryTest extends SpringTest {
 
-    private Location rennes;
-
     @Autowired
     private EventRepository eventRepository;
 
@@ -51,14 +50,29 @@ public class FkRepositoryTest extends SpringTest {
     private TemplateWithCounter template;
 
     private FKResolver<Event, EventDTO> eventResolver;
+    private FKResolver<Country, CountryDTO> countryResolver;
     private Location paris;
+    private Location london;
+    private Location rennes;
 
     @PostConstruct
     private void init() {
         eventResolver = FKResolver.of(EventDTO::new)
                 .add(it -> it.getLocationId() != null ? new Object[]{it.getCountryId(), it.getLocationId()} : null,
-                        locationRepository, (dto, location) -> dto.location = new LocationDTO(location))
-                .add(Event::getCountryId, countryRepository, (dto, country) -> dto.location.country = country)
+                        locationRepository, (dto, location) -> dto.location = new LocationDTO(location.get(0)))
+                .add(Event::getCountryId, countryRepository, (dto, country) -> dto.location.country = country.get(0))
+                .build();
+
+        countryResolver = FKResolver.of(CountryDTO::new)
+                .add(Country::getId, eventRepository::findByCountries, Event::getCountryId, (dto, events) -> {
+                    dto.events = events.stream().map(EventCountryDTO::new).collect(Collectors.toList());
+                })
+                .add(
+                        it -> it.getCapitalId() != null ? new Object[]{it.getId(), it.getCapitalId()} : null,
+                        locationRepository,
+                        loc -> new Object[]{loc.getCountryId(), loc.getId()},
+                        (dto, locations) -> dto.capital = new NamedEntity(locations.get(0))
+                )
                 .build();
     }
 
@@ -68,16 +82,20 @@ public class FkRepositoryTest extends SpringTest {
             template.executeUpdate("SET REFERENTIAL_INTEGRITY FALSE"); // No deferred check on H2
             rennes = locationRepository.save(new Location("FR", "Rennes"));
             paris = locationRepository.save(new Location("FR", "Paris"));
+            london = locationRepository.save(new Location("UK", "London"));
             Assert.assertNotNull(rennes.getId());
             Assert.assertNotNull(paris.getId());
             // Rennes is now a valid location
             countryRepository.save(new Country("FR", "France", paris.getId()));
+            countryRepository.save(new Country("UK", "United Kingdom", london.getId()));
             return null;
         });
 
         final Event stunfest = new Event("Stunfest", rennes);
+        final Event download = new Event("Download", paris);
         // and now we save
         eventRepository.save(stunfest);
+        eventRepository.save(download);
     }
 
     @After
@@ -91,21 +109,38 @@ public class FkRepositoryTest extends SpringTest {
     }
 
     @Test
+    public void test1NResolution() {
+        List<Country> res = countryRepository.findAll();
+        long counter = template.getQueryCounter();
+        Map<String, CountryDTO> countryDTOs = countryResolver.resolve(res.stream()).collect(Collectors.toMap(it -> it.id, it->it));
+        Assert.assertEquals(res.size(), countryDTOs.size());
+        Assert.assertEquals(2, countryDTOs.get("FR").events.size());
+        Assert.assertEquals(0, countryDTOs.get("UK").events.size());
+        Assert.assertEquals("Paris", countryDTOs.get("FR").capital.name);
+        Assert.assertEquals("London", countryDTOs.get("UK").capital.name);
+        Assert.assertEquals(counter + 2, template.getQueryCounter());
+    }
+
+    @Test
+    public void testRepositoryResolve() {
+        List<String> names = Arrays.asList("Stunfest", "Download");
+        List<Event> events = eventRepository.findByNames(names);
+        Set<String> eventNames = events.stream().map(Event::getName).collect(Collectors.toSet());
+        Assert.assertEquals(new HashSet<>(names), eventNames);
+    }
+
+    @Test
     public void testSimpleResolve() {
         long counter = template.getQueryCounter();
-        Map<String, Country> countries = countryRepository.resolveFK(Stream.of(rennes, paris), Location::getCountryId);
+        Function<Stream<Country>, Map<String, Country>> asIndex = StreamUtils.asIndex(countryRepository.pkGetter());
+        Map<String, Country> countries = countryRepository.findAll(Stream.of(rennes, paris).map(Location::getCountryId), asIndex);
         Assert.assertEquals(counter+1, template.getQueryCounter());
         Assert.assertEquals(1, countries.size());
         Assert.assertEquals("France", countries.get("FR").getName());
 
         counter = template.getQueryCounter();
-        countries = countryRepository.resolveFK(Stream.empty(), Location::getCountryId);
+        countries = countryRepository.findAll(Stream.empty(), asIndex);
         // No query must be made if nothing has to be found
-        Assert.assertEquals(counter, template.getQueryCounter());
-        Assert.assertEquals(0, countries.size());
-
-        counter = template.getQueryCounter();
-        countries = countryRepository.resolveFK(Stream.of(new Location(null, "Unknown")), Location::getCountryId);
         Assert.assertEquals(counter, template.getQueryCounter());
         Assert.assertEquals(0, countries.size());
     }
@@ -174,29 +209,56 @@ public class FkRepositoryTest extends SpringTest {
         }
     }
 
-    private class EventDTO {
+    private class EventDTO extends EventCountryDTO {
+        public LocationDTO location;
+
+        public EventDTO(Event event) {
+            super(event);
+        }
+    }
+
+    private class EventCountryDTO {
         public Integer id;
 
         public String name;
 
-        public LocationDTO location;
-
-        public EventDTO(Event event) {
+        public EventCountryDTO(Event event) {
             id = event.getId();
             name = event.getName();
         }
     }
 
-    private class LocationDTO {
-        public Country country;
+    private class CountryDTO {
+        public String id;
 
+        public String name;
+
+        public NamedEntity capital;
+
+        public List<EventCountryDTO> events;
+
+        public CountryDTO(Country country) {
+            id = country.getId();
+            name = country.getName();
+        }
+    }
+
+    private class NamedEntity {
         public Integer id;
 
         public String name;
 
-        public LocationDTO(Location location) {
+        public NamedEntity(Location location) {
             id = location.getId();
             name = location.getName();
+        }
+    }
+
+    private class LocationDTO extends NamedEntity {
+        public Country country;
+
+        public LocationDTO(Location location) {
+            super(location);
         }
     }
 }

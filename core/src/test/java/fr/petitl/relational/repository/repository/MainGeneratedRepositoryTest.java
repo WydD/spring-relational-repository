@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import fr.petitl.relational.repository.repository.model.MainGenerated;
 import fr.petitl.relational.repository.template.RelationalTemplate;
 import fr.petitl.relational.repository.template.TemplateWithCounter;
+import fr.petitl.relational.repository.util.StreamUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -98,7 +99,7 @@ public class MainGeneratedRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     public void testFindAllIndexed() throws Exception {
-        Map<Integer, MainGenerated> all = repository.findAll(Stream.of(1, 3), repository.asIndex());
+        Map<Integer, MainGenerated> all = repository.findAll(Stream.of(1, 3), StreamUtils.asIndex(repository.pkGetter()));
         verifyPojo1(all.get(1));
         verifyPojo3(all.get(3));
         assertEquals(2, all.size());

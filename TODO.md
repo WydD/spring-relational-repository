@@ -1,11 +1,7 @@
 To implement
-* Integrate macros in dialect
 * Merge impl (and default based on dialect)
 * Group By mappings
 * Other dialects
 * Default type mapping override
 * Embed columns
 * Trigger handling?
-
-To be checked
-* *-n FK management
